@@ -1,0 +1,14 @@
+@if (Model.IsApproved)
+{
+    <p>Сотрудник <b>@Model.EmployeeFullName</b> (субподрядчик «@Model.SubcontractorName») <b>согласован</b>.</p>
+}
+else
+{
+    <p>Сотрудник <b>@Model.EmployeeFullName</b> (субподрядчик «@Model.SubcontractorName») <b>отклонён</b>.</p>
+}
+<p>Согласующий: <b>@Model.ApproverFullName</b>.</p>
+@if (!string.IsNullOrWhiteSpace(Model.Comment))
+{
+    <p><b>Комментарий:</b> @Model.Comment</p>
+}
+<p>История: <a href="@Model.HistoryUrl">@Model.HistoryUrl</a></p>

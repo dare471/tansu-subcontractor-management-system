@@ -1,0 +1,123 @@
+<script setup lang="ts">
+import { ref, onMounted, h } from 'vue';
+import {
+  NCard, NSpace, NButton, NDataTable, NModal, NInput, NAlert,
+  useMessage, type DataTableColumns
+} from 'naive-ui';
+import {
+  documentRequestsApi, requestTypeLabel, approverRoleLabel,
+  type DocumentRequestInboxItem
+} from '@/api/documentRequests';
+import { toApiError } from '@/api/client';
+
+const msg = useMessage();
+const items = ref<DocumentRequestInboxItem[]>([]);
+const loading = ref(false);
+
+const decisionItem = ref<DocumentRequestInboxItem | null>(null);
+const decisionMode = ref<'approve' | 'reject'>('approve');
+const comment = ref('');
+const submitting = ref(false);
+
+async function load() {
+  loading.value = true;
+  try { items.value = await documentRequestsApi.inbox(); }
+  catch (e) { msg.error(toApiError(e).detail); }
+  finally { loading.value = false; }
+}
+
+function openApprove(item: DocumentRequestInboxItem) {
+  decisionItem.value = item;
+  decisionMode.value = 'approve';
+  comment.value = '';
+}
+
+function openReject(item: DocumentRequestInboxItem) {
+  decisionItem.value = item;
+  decisionMode.value = 'reject';
+  comment.value = '';
+}
+
+async function confirm() {
+  if (!decisionItem.value) return;
+  if (decisionMode.value === 'reject' && comment.value.trim().length < 3) {
+    msg.warning('Комментарий обязателен (мин. 3 символа).');
+    return;
+  }
+  submitting.value = true;
+  try {
+    if (decisionMode.value === 'approve') {
+      await documentRequestsApi.approve(decisionItem.value.sheetId, comment.value.trim() || undefined);
+      msg.success('Согласовано');
+    } else {
+      await documentRequestsApi.reject(decisionItem.value.sheetId, comment.value.trim());
+      msg.success('Отклонено');
+    }
+    decisionItem.value = null;
+    await load();
+  } catch (e) { msg.error(toApiError(e).detail); }
+  finally { submitting.value = false; }
+}
+
+const columns: DataTableColumns<DocumentRequestInboxItem> = [
+  { title: 'Тип', key: 'requestType', width: 140, render: (r) => requestTypeLabel(r.requestType) },
+  { title: 'Тема', key: 'title' },
+  { title: 'Субподрядчик', key: 'subcontractorName' },
+  { title: 'Проект', key: 'projectName' },
+  { title: 'Ваша роль', key: 'approverRole', width: 130, render: (r) => approverRoleLabel(r.approverRole) },
+  { title: 'Шаг', key: 'orderNo', width: 70 },
+  {
+    title: 'Действия', key: 'a', width: 260,
+    render: (row) => h(NSpace, { size: 'small' }, () => [
+      h(NButton, { size: 'small', type: 'success', onClick: () => openApprove(row) }, () => 'Согласовать'),
+      h(NButton, { size: 'small', type: 'error', onClick: () => openReject(row) }, () => 'Отклонить')
+    ])
+  }
+];
+
+onMounted(load);
+</script>
+
+<template>
+  <NCard title="Входящие заявки">
+    <NSpace vertical>
+      <NButton @click="load">Обновить</NButton>
+      <NDataTable :columns="columns" :data="items" :loading="loading" :row-key="(r) => r.sheetId" />
+    </NSpace>
+
+    <NModal
+      :show="!!decisionItem"
+      preset="card"
+      :title="decisionMode === 'approve' ? 'Согласовать заявку' : 'Отклонить заявку'"
+      style="width:520px"
+      @update:show="(v) => { if (!v) decisionItem = null }"
+    >
+      <NSpace vertical :size="14">
+        <NAlert v-if="decisionMode === 'reject'" type="warning">Комментарий обязателен при отклонении.</NAlert>
+        <div v-if="decisionItem">
+          <b>Тип:</b> {{ requestTypeLabel(decisionItem.requestType) }}<br />
+          <b>Тема:</b> {{ decisionItem.title }}<br />
+          <b>Субподрядчик:</b> {{ decisionItem.subcontractorName }}<br />
+          <b>Роль:</b> {{ approverRoleLabel(decisionItem.approverRole) }}
+        </div>
+        <NInput
+          v-model:value="comment"
+          type="textarea"
+          :rows="4"
+          :placeholder="decisionMode === 'reject' ? 'Причина отклонения' : 'Комментарий (необязательно)'"
+        />
+        <NSpace justify="end">
+          <NButton @click="decisionItem = null">Отмена</NButton>
+          <NButton
+            :type="decisionMode === 'approve' ? 'success' : 'error'"
+            :loading="submitting"
+            :disabled="decisionMode === 'reject' && comment.trim().length < 3"
+            @click="confirm"
+          >
+            {{ decisionMode === 'approve' ? 'Согласовать' : 'Отклонить' }}
+          </NButton>
+        </NSpace>
+      </NSpace>
+    </NModal>
+  </NCard>
+</template>

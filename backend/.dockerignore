@@ -1,0 +1,8 @@
+**/bin
+**/obj
+**/.vs
+**/.idea
+**/*.user
+**/Dockerfile
+**/node_modules
+**/dist

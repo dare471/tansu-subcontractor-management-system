@@ -1,0 +1,124 @@
+name: tansu
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tansu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tansu}
+      POSTGRES_USER: ${POSTGRES_USER:-tansu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tansu}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tansu} -d ${POSTGRES_DB:-tansu}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: tansu-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: tansu-mailhog
+    restart: unless-stopped
+    ports:
+      - "${SMTP_PORT:-1025}:1025"
+      - "${MAILHOG_UI_PORT:-8025}:8025"
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: src/Tansu.Api/Dockerfile
+    container_name: tansu-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-tansu};Username=${POSTGRES_USER:-tansu};Password=${POSTGRES_PASSWORD:-tansu}"
+      Jwt__Issuer: ${JWT_ISSUER:-tansu-api}
+      Jwt__Audience: ${JWT_AUDIENCE:-tansu-clients}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}
+      Entra__TenantId: ${ENTRA_TENANT_ID}
+      Entra__Audience: ${ENTRA_AUDIENCE}
+      RabbitMq__Host: rabbitmq
+      RabbitMq__User: ${RABBITMQ_DEFAULT_USER:-guest}
+      RabbitMq__Password: ${RABBITMQ_DEFAULT_PASS:-guest}
+      App__PhotoStoragePath: /var/lib/tansu/photos
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - photos-data:/var/lib/tansu/photos
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: src/Tansu.Worker/Dockerfile
+    container_name: tansu-worker
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    environment:
+      DOTNET_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      RabbitMq__Host: rabbitmq
+      RabbitMq__User: ${RABBITMQ_DEFAULT_USER:-guest}
+      RabbitMq__Password: ${RABBITMQ_DEFAULT_PASS:-guest}
+      Smtp__Host: ${SMTP_HOST:-mailhog}
+      Smtp__Port: ${SMTP_PORT:-1025}
+      Smtp__From: ${SMTP_FROM:-no-reply@tansu.local}
+      Smtp__User: ${SMTP_USER:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      App__WebBaseUrl: http://localhost:${WEB_PORT:-5173}
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tansu-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  photos-data:

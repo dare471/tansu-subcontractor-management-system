@@ -1,0 +1,11 @@
+<p>Здравствуйте, <b>@Model.FullName</b>!</p>
+<p>Для вас создана учётная запись субподрядчика в системе ТАНСУ.</p>
+<p>
+    <b>Email:</b> @Model.Email<br />
+    <b>Временный пароль:</b> <code>@Model.TemporaryPassword</code>
+</p>
+<p>
+    Войдите по адресу
+    <a href="@Model.LoginUrl">@Model.LoginUrl</a>
+    и при первом входе вы будете обязаны сменить пароль.
+</p>

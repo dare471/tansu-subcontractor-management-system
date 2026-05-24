@@ -1,0 +1,17 @@
+@model dynamic
+@{
+    Layout = "_layout";
+}
+<h2>Пакет на согласование</h2>
+<p>Здравствуйте, @Model.ApproverName!</p>
+<p>
+    Субподрядчик <strong>@Model.SubcontractorName</strong> отправил пакет
+    «<strong>@Model.BatchTitle</strong>» (@Model.EmployeeCount чел.) по проекту @Model.ProjectName.
+</p>
+<ul>
+@foreach (var line in Model.Employees)
+{
+    <li>@line</li>
+}
+</ul>
+<p><a href="@Model.InboxUrl">Открыть входящие согласования</a></p>

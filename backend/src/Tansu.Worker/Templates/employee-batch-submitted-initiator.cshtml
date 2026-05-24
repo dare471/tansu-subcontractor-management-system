@@ -1,0 +1,15 @@
+@model dynamic
+@{
+    Layout = "_layout";
+}
+<h2>Пакет отправлен</h2>
+<p>
+    Пакет «<strong>@Model.BatchTitle</strong>» (@Model.EmployeeCount чел.) отправлен на согласование.
+</p>
+<ul>
+@foreach (var line in Model.Employees)
+{
+    <li>@line</li>
+}
+</ul>
+<p><a href="@Model.BatchesUrl">Открыть пакеты</a></p>
