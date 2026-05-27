@@ -40,6 +40,8 @@ await using (var scope = app.Services.CreateAsyncScope())
         await DemoApproversSeeder.EnsureAsync(scope.ServiceProvider);
         await DemoDocumentRequestsSeeder.EnsureAsync(scope.ServiceProvider);
         await DemoSampleApprovalsSeeder.EnsureAsync(scope.ServiceProvider);
+        await DemoAccessPassesSeeder.EnsureAsync(scope.ServiceProvider);
+        await DemoEmployeePortalSeeder.EnsureAsync(scope.ServiceProvider);
     }
 }
 
@@ -59,6 +61,9 @@ app.MapUserEndpoints();
 app.MapProjectEndpoints();
 app.MapMatrixEndpoints();
 app.MapEmployeeEndpoints();
+app.MapAccessPassEndpoints();
+app.MapInternalVerifyEndpoints();
+app.MapEmployeePortalEndpoints();
 app.MapApprovalEndpoints();
 app.MapEmployeeBatchEndpoints();
 app.MapDocumentRequestEndpoints();

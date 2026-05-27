@@ -18,6 +18,12 @@ public sealed class GetEmployeeApprovalsHandler(ITansuDbContext db, ICurrentUser
             .FirstOrDefaultAsync(e => e.Id == req.EmployeeId, ct)
             ?? throw new NotFoundException("Employee", req.EmployeeId);
 
+        if (currentUser.UserType == UserType.Employee &&
+            currentUser.EmployeeId != req.EmployeeId)
+        {
+            throw new ForbiddenException();
+        }
+
         if (currentUser.UserType == UserType.Subcontractor &&
             currentUser.SubcontractorId != employee.SubcontractorId)
         {

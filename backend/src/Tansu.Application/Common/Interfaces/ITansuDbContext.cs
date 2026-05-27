@@ -17,6 +17,10 @@ public interface ITansuDbContext
     DbSet<DocumentRequest> DocumentRequests { get; }
     DbSet<DocumentRequestMatrixEntry> DocumentApprovalMatrix { get; }
     DbSet<DocumentApprovalSheetEntry> DocumentApprovalSheet { get; }
+    DbSet<EmployeeAccessPass> EmployeeAccessPasses { get; }
+    DbSet<EmployeeSiteVisit> EmployeeSiteVisits { get; }
+    DbSet<EmployeeSafetyQuizCompletion> EmployeeSafetyQuizCompletions { get; }
+    DbSet<EmployeePpeIssuance> EmployeePpeIssuances { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

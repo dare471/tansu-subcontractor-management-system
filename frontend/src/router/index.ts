@@ -121,7 +121,7 @@ router.beforeEach(async (to) => {
   }
 
   if (auth.mustChangePassword && !to.meta.allowMustChange) {
-    return { name: 'change-password' };
+    return { name: 'change-password', query: { redirect: to.fullPath } };
   }
 
   const roles = to.meta.roles as string[] | undefined;

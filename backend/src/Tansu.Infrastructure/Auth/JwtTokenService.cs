@@ -35,6 +35,9 @@ public class JwtTokenService : IJwtTokenService
         if (user.SubcontractorId is { } sid)
             claims.Add(new Claim("subcontractor_id", sid.ToString()));
 
+        if (user.EmployeeId is { } eid)
+            claims.Add(new Claim("employee_id", eid.ToString()));
+
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 

@@ -176,3 +176,62 @@ CREATE INDEX IF NOT EXISTS ix_document_approval_sheet_request_round
     ON subcontract.document_approval_sheet (document_request_id, round_id, order_no);
 CREATE INDEX IF NOT EXISTS ix_document_approval_sheet_approver_status
     ON subcontract.document_approval_sheet (approver_user_id, status);
+
+CREATE TABLE IF NOT EXISTS subcontract.employee_access_passes (
+    id           uuid PRIMARY KEY,
+    employee_id  uuid NOT NULL REFERENCES subcontract.employees(id) ON DELETE CASCADE,
+    token        varchar(64) NOT NULL,
+    issued_at    timestamptz NOT NULL DEFAULT now(),
+    revoked_at   timestamptz,
+    CONSTRAINT uq_employee_access_passes_token UNIQUE (token)
+);
+
+CREATE INDEX IF NOT EXISTS ix_employee_access_passes_employee
+    ON subcontract.employee_access_passes (employee_id, issued_at DESC);
+
+CREATE TABLE IF NOT EXISTS subcontract.employee_site_visits (
+    id                   uuid PRIMARY KEY,
+    employee_id          uuid NOT NULL REFERENCES subcontract.employees(id) ON DELETE CASCADE,
+    access_pass_id       uuid REFERENCES subcontract.employee_access_passes(id) ON DELETE SET NULL,
+    checked_in_at        timestamptz NOT NULL DEFAULT now(),
+    face_confidence      double precision,
+    verification_method  varchar(32) NOT NULL DEFAULT 'face_id'
+);
+
+CREATE INDEX IF NOT EXISTS ix_employee_site_visits_employee
+    ON subcontract.employee_site_visits (employee_id, checked_in_at DESC);
+
+ALTER TABLE subcontract.users ADD COLUMN IF NOT EXISTS employee_id uuid
+    REFERENCES subcontract.employees(id) ON DELETE CASCADE;
+
+ALTER TABLE subcontract.users DROP CONSTRAINT IF EXISTS ck_users_user_type;
+ALTER TABLE subcontract.users ADD CONSTRAINT ck_users_user_type
+    CHECK (user_type IN ('TANSU', 'Subcontractor', 'Employee'));
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_employee
+    ON subcontract.users (employee_id) WHERE employee_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS subcontract.employee_safety_quiz_completions (
+    id               uuid PRIMARY KEY,
+    employee_id      uuid NOT NULL REFERENCES subcontract.employees(id) ON DELETE CASCADE,
+    score            integer NOT NULL,
+    total_questions  integer NOT NULL,
+    completed_at     timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT uq_employee_safety_quiz_employee UNIQUE (employee_id)
+);
+
+CREATE TABLE IF NOT EXISTS subcontract.employee_ppe_issuances (
+    id                uuid PRIMARY KEY,
+    employee_id       uuid NOT NULL REFERENCES subcontract.employees(id) ON DELETE CASCADE,
+    item_type         varchar(32) NOT NULL,
+    size              varchar(32),
+    inventory_number  varchar(64),
+    issued_at         timestamptz NOT NULL DEFAULT now(),
+    issued_by_user_id uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE RESTRICT,
+    returned_at       timestamptz,
+    notes             varchar(500),
+    CONSTRAINT ck_employee_ppe_item_type CHECK (item_type IN ('helmet', 'uniform'))
+);
+
+CREATE INDEX IF NOT EXISTS ix_employee_ppe_employee
+    ON subcontract.employee_ppe_issuances (employee_id, item_type, issued_at DESC);

@@ -17,6 +17,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         e.Property(x => x.PasswordHash).HasColumnName("password_hash");
         e.Property(x => x.UserType).HasColumnName("user_type").HasMaxLength(32).IsRequired();
         e.Property(x => x.SubcontractorId).HasColumnName("subcontractor_id");
+        e.Property(x => x.EmployeeId).HasColumnName("employee_id");
         e.Property(x => x.ApproverRole).HasColumnName("approver_role").HasMaxLength(32);
         e.Property(x => x.MustChangePassword).HasColumnName("must_change_password");
         e.Property(x => x.IsActive).HasColumnName("is_active");
@@ -28,5 +29,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .WithMany(s => s.Users)
             .HasForeignKey(x => x.SubcontractorId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        e.HasOne(x => x.Employee)
+            .WithMany()
+            .HasForeignKey(x => x.EmployeeId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        e.HasIndex(x => x.EmployeeId).IsUnique();
     }
 }

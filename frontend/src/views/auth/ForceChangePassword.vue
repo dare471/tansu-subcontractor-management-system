@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { NForm, NFormItem, NInput, NButton, NSpace, NAlert, NIcon, useMessage } from 'naive-ui';
 import { KeyOutline } from '@vicons/ionicons5';
 import { useAuthStore } from '@/stores/auth';
@@ -8,6 +8,7 @@ import { toApiError } from '@/api/client';
 
 const auth = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 const msg = useMessage();
 
 const oldPwd = ref('');
@@ -34,7 +35,8 @@ async function submit() {
   try {
     await auth.changePassword(oldPwd.value, newPwd.value);
     msg.success('Пароль изменён');
-    router.push('/');
+    const redirect = (route.query.redirect as string) || '/';
+    router.push(redirect);
   } catch (e) { msg.error(toApiError(e).detail); }
   finally { submitting.value = false; }
 }

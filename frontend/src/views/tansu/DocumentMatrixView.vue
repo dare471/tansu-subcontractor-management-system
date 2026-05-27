@@ -173,6 +173,7 @@ const columns = [
               <NButton type="success" :loading="saving" :disabled="!steps.length" @click="save">Сохранить</NButton>
             </NSpace>
             <NDataTable :columns="columns" :data="steps" :row-key="(r) => r.id" />
+              
           </template>
           <NEmpty v-else description="Выберите проект, субподрядчика и тип" />
         </NSpace>

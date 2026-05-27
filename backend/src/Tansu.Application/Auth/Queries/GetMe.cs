@@ -29,6 +29,7 @@ public sealed class GetMeHandler(
             user.Subcontractor?.Name,
             user.Subcontractor?.Bin,
             user.ApproverRole,
-            user.MustChangePassword);
+            user.MustChangePassword,
+            user.EmployeeId);
     }
 }

@@ -34,6 +34,6 @@ public sealed class CreateSubcontractorHandler(ITansuDbContext db)
         db.Subcontractors.Add(entity);
         await db.SaveChangesAsync(ct);
 
-        return new SubcontractorDto(entity.Id, entity.Name, entity.Bin, 0, 0, entity.CreatedAt);
+        return new SubcontractorDto(entity.Id, entity.Name, entity.Bin, 0, 0, 0, entity.CreatedAt);
     }
 }

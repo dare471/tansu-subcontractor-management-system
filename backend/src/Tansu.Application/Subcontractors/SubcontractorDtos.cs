@@ -5,7 +5,8 @@ public sealed record SubcontractorDto(
     string Name,
     string Bin,
     int ProjectsCount,
-    int UsersCount,
+    int EmployeesApprovedCount,
+    int EmployeesNotApprovedCount,
     DateTimeOffset CreatedAt);
 
 public sealed record CreateSubcontractorRequest(string Name, string Bin);

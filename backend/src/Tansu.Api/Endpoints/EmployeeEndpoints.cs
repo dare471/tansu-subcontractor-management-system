@@ -1,10 +1,14 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Tansu.Application.AccessPasses.Queries;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Application.Employees;
 using Tansu.Application.Employees.Commands;
 using Tansu.Application.Employees.Queries;
+using Tansu.Application.PpeIssuance;
+using Tansu.Application.PpeIssuance.Commands;
+using Tansu.Application.PpeIssuance.Queries;
 using Tansu.Domain.Enums;
 
 namespace Tansu.Api.Endpoints;
@@ -80,6 +84,31 @@ public static class EmployeeEndpoints
             var stream = await storage.OpenReadAsync(e.PhotoPath, ct);
             return stream is null ? Results.NotFound() : Results.Stream(stream, "image/*");
         });
+
+        g.MapGet("/{id:guid}/site-visits", async (
+            Guid id, IMediator m, CancellationToken ct) =>
+                Results.Ok(await m.Send(new GetEmployeeSiteVisitsQuery(id), ct)))
+        .WithSummary("История проходов сотрудника на объект (Face ID).");
+
+        g.MapGet("/{id:guid}/ppe", async (
+            Guid id, IMediator m, CancellationToken ct) =>
+                Results.Ok(await m.Send(new GetEmployeePpeSummaryQuery(id), ct)))
+        .WithSummary("Выданные СИЗ сотрудника.");
+
+        g.MapPost("/{id:guid}/ppe", async (
+            Guid id, [FromBody] IssueEmployeePpeRequest req, IMediator m, CancellationToken ct) =>
+        {
+            var dto = await m.Send(new IssueEmployeePpeCommand(
+                id, req.ItemType, req.Size, req.InventoryNumber, req.Notes), ct);
+            return Results.Created($"/api/employees/{id}/ppe/{dto.Id}", dto);
+        })
+        .WithSummary("Выдать каску или униформу.");
+
+        g.MapPost("/{id:guid}/ppe/{issuanceId:guid}/return", async (
+            Guid id, Guid issuanceId, [FromBody] ReturnEmployeePpeRequest req,
+            IMediator m, CancellationToken ct) =>
+                Results.Ok(await m.Send(new ReturnEmployeePpeCommand(id, issuanceId, req.Notes), ct)))
+        .WithSummary("Оформить возврат СИЗ.");
 
         return app;
     }

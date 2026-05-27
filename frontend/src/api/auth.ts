@@ -8,6 +8,7 @@ export type LoginResponse = {
   userType: 'TANSU' | 'Subcontractor';
   subcontractorId: string | null;
   mustChangePassword: boolean;
+  employeeId?: string | null;
 };
 
 export type MeResponse = {
@@ -21,6 +22,7 @@ export type MeResponse = {
   subcontractorBin: string | null;
   approverRole: string | null;
   mustChangePassword: boolean;
+  employeeId?: string | null;
 };
 
 export type MyProject = { projectOid: string; name: string | null; hasApprovalMatrix: boolean };
@@ -33,7 +35,9 @@ export const authApi = {
     apiClient.post<LoginResponse>('/api/auth/dev-login', { email }).then((r) => r.data),
 
   changePassword: (oldPassword: string, newPassword: string) =>
-    apiClient.post('/api/auth/change-password', { oldPassword, newPassword }),
+    apiClient
+      .post<LoginResponse>('/api/auth/change-password', { oldPassword, newPassword })
+      .then((r) => r.data),
 
   me: () => apiClient.get<MeResponse>('/api/auth/me').then((r) => r.data),
 

@@ -26,7 +26,21 @@ const addCandidates = ref<Employee[]>([]);
 const addSelected = ref<string[]>([]);
 const addLoading = ref(false);
 
-const BATCH_LIST_SCROLL_X = 1040;
+function batchApprovalCounts(row: ApprovalBatch) {
+  const approved = row.employees.filter((e) => e.currentStatus === 'approved').length;
+  const notApproved = row.employees.length - approved;
+  return { approved, notApproved };
+}
+
+function renderBatchApprovalCounts(row: ApprovalBatch) {
+  const { approved, notApproved } = batchApprovalCounts(row);
+  return h(NSpace, { size: 4, wrap: false, justify: 'center' }, () => [
+    h(NTag, { type: 'success', size: 'small', round: true }, () => `${approved} согл.`),
+    h(NTag, { type: 'warning', size: 'small', round: true }, () => `${notApproved} ост.`)
+  ]);
+}
+
+const BATCH_LIST_SCROLL_X = 1130;
 const MEMBER_TABLE_SCROLL_X = 680;
 
 async function load() {
@@ -221,7 +235,10 @@ const batchColumns: DataTableColumns<ApprovalBatch> = [
     ellipsis: { tooltip: true },
     render: (r) => r.projectName ?? r.projectOid
   },
-  { title: 'Сотрудников', key: 'employeeCount', width: 110, align: 'center' },
+  {
+    title: 'Согласование', key: 'approval', width: 200, align: 'center',
+    render: (r) => renderBatchApprovalCounts(r)
+  },
   { title: 'Статус', key: 'status', width: 140, render: (r) => statusTag(r.status) },
   {
     title: 'Создан', key: 'createdAt', width: 110,

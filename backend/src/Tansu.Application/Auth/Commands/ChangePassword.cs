@@ -7,7 +7,7 @@ using Tansu.Domain.Enums;
 
 namespace Tansu.Application.Auth.Commands;
 
-public sealed record ChangePasswordCommand(string OldPassword, string NewPassword) : IRequest<Unit>;
+public sealed record ChangePasswordCommand(string OldPassword, string NewPassword) : IRequest<LoginResponse>;
 
 public sealed class ChangePasswordValidator : AbstractValidator<ChangePasswordCommand>
 {
@@ -26,17 +26,18 @@ public sealed class ChangePasswordValidator : AbstractValidator<ChangePasswordCo
 public sealed class ChangePasswordHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
-    IPasswordHasher hasher) : IRequestHandler<ChangePasswordCommand, Unit>
+    IPasswordHasher hasher,
+    IJwtTokenService jwt) : IRequestHandler<ChangePasswordCommand, LoginResponse>
 {
-    public async Task<Unit> Handle(ChangePasswordCommand request, CancellationToken ct)
+    public async Task<LoginResponse> Handle(ChangePasswordCommand request, CancellationToken ct)
     {
         var userId = currentUser.UserId ?? throw new UnauthorizedException();
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new UnauthorizedException();
 
-        if (user.UserType != UserType.Subcontractor)
-            throw new ForbiddenException("Изменение пароля доступно только субподрядчикам.");
+        if (user.UserType != UserType.Subcontractor && user.UserType != UserType.Employee)
+            throw new ForbiddenException("Изменение пароля недоступно для этой учётной записи.");
 
         if (string.IsNullOrEmpty(user.PasswordHash) || !hasher.Verify(request.OldPassword, user.PasswordHash))
             throw new ValidationFailedException("Старый пароль введён неверно.");
@@ -48,6 +49,16 @@ public sealed class ChangePasswordHandler(
         user.MustChangePassword = false;
 
         await db.SaveChangesAsync(ct);
-        return Unit.Value;
+
+        var token = jwt.IssueLocalToken(user);
+        return new LoginResponse(
+            token.AccessToken,
+            token.ExpiresAt,
+            user.Id,
+            user.Email,
+            user.UserType,
+            user.SubcontractorId,
+            user.MustChangePassword,
+            user.EmployeeId);
     }
 }

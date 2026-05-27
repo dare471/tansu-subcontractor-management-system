@@ -7,5 +7,6 @@ public interface ICurrentUser
     string? Email { get; }
     string? UserType { get; }
     Guid? SubcontractorId { get; }
+    Guid? EmployeeId { get; }
     bool MustChangePassword { get; }
 }

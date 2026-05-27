@@ -69,10 +69,15 @@ services:
       RabbitMq__User: ${RABBITMQ_DEFAULT_USER:-guest}
       RabbitMq__Password: ${RABBITMQ_DEFAULT_PASS:-guest}
       App__PhotoStoragePath: /var/lib/tansu/photos
+      AccessPass__VerifyWebBaseUrl: ${AccessPass__VerifyWebBaseUrl:-https://localhost:${VERIFY_WEB_PORT:-5174}}
+      AccessPass__VerifyServiceKey: ${VERIFY_SERVICE_KEY:-dev-verify-service-key-change-me}
+      FaceVerify__BaseUrl: ${FACE_VERIFY_BASE_URL:-http://face-verify:8092}
+      EmployeePortal__CredentialsLogPath: ${EMPLOYEE_PORTAL_CREDENTIALS_PATH:-/app/data/employee-portal-credentials.log}
     ports:
       - "${API_PORT:-8080}:8080"
     volumes:
       - photos-data:/var/lib/tansu/photos
+      - ./data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
       interval: 10s
@@ -117,6 +122,94 @@ services:
     ports:
       - "${WEB_PORT:-5173}:5173"
     command: npm run dev -- --host 0.0.0.0
+
+  verify-api:
+    build:
+      context: ./backend
+      dockerfile: src/Tansu.Verify.Api/Dockerfile
+    container_name: tansu-verify-api
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      face-verify:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: http://+:8090
+      TansuApi__BaseUrl: http://api:8080
+      TansuApi__VerifyServiceKey: ${VERIFY_SERVICE_KEY:-dev-verify-service-key-change-me}
+      FaceVerify__BaseUrl: ${FACE_VERIFY_BASE_URL:-http://face-verify:8092}
+      FaceVerify__TimeoutSeconds: ${FACE_VERIFY_TIMEOUT_SECONDS:-120}
+    ports:
+      - "${VERIFY_API_PORT:-8091}:8090"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8090/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 8
+      start_period: 15s
+
+  face-verify:
+    build:
+      context: ./face-verify
+      dockerfile: Dockerfile
+    container_name: tansu-face-verify
+    restart: unless-stopped
+    environment:
+      FACE_VERIFY_MODEL: ${FACE_VERIFY_MODEL:-Facenet}
+      FACE_VERIFY_DETECTOR: ${FACE_VERIFY_DETECTOR:-opencv}
+      FACE_VERIFY_MAX_SIDE: ${FACE_VERIFY_MAX_SIDE:-1024}
+      DEEPFACE_HOME: /models
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    ports:
+      - "${FACE_VERIFY_PORT:-8092}:8092"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8092/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+
+  verify-web:
+    build:
+      context: ./verify-web
+      dockerfile: Dockerfile
+    container_name: tansu-verify-web
+    restart: unless-stopped
+    depends_on:
+      verify-api:
+        condition: service_healthy
+    environment:
+      VITE_VERIFY_API_BASE_URL: ${VITE_VERIFY_API_BASE_URL:-}
+      VITE_VERIFY_API_PROXY_TARGET: http://verify-api:8090
+    ports:
+      - "${VERIFY_WEB_PORT:-5174}:5174"
+    volumes:
+      - ./verify-web:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+
+  employee-portal-web:
+    build:
+      context: ./employee-portal-web
+      dockerfile: Dockerfile
+    container_name: tansu-employee-portal-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+    ports:
+      - "${EMPLOYEE_PORTAL_WEB_PORT:-5175}:5175"
+    volumes:
+      - ./employee-portal-web:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0 --port 5175
 
 volumes:
   postgres-data:

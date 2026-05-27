@@ -3,7 +3,7 @@ import { ref, onMounted, computed, h } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   NCard, NSpace, NInput, NButton, NDataTable, NModal, NForm, NFormItem,
-  NPopconfirm, NSelect, NEmpty, useMessage, type DataTableColumns, type SelectOption
+  NPopconfirm, NSelect, NEmpty, NTag, useMessage, type DataTableColumns, type SelectOption
 } from 'naive-ui';
 import { subcontractorsApi, type Subcontractor, type ProjectBinding } from '@/api/subcontractors';
 import { projectsApi, type Project } from '@/api/projects';
@@ -125,14 +125,25 @@ async function unbindProject(projectOid: string) {
   } catch (e) { msg.error(toApiError(e).detail); }
 }
 
+const TABLE_SCROLL_X = 1120;
+
 const columns: DataTableColumns<Subcontractor> = [
-  { title: 'Наименование', key: 'name' },
+  {
+    title: 'Наименование', key: 'name', width: 280,
+    ellipsis: { tooltip: true }
+  },
   { title: 'БИН', key: 'bin', width: 160 },
   { title: 'Проектов', key: 'projectsCount', width: 100 },
-  { title: 'Пользователей', key: 'usersCount', width: 130 },
+  {
+    title: 'Согласование', key: 'approval', width: 200,
+    render: (row) => h(NSpace, { size: 4, wrap: false }, () => [
+      h(NTag, { type: 'success', size: 'small', round: true }, () => `${row.employeesApprovedCount} согл.`),
+      h(NTag, { type: 'warning', size: 'small', round: true }, () => `${row.employeesNotApprovedCount} ост.`)
+    ])
+  },
   {
     title: 'Действия', key: 'actions', width: 380,
-    render: (row) => h(NSpace, { size: 'small' }, () => [
+    render: (row) => h(NSpace, { size: 'small', wrap: false }, () => [
       h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => 'Изменить'),
       h(NButton, { size: 'small', onClick: () => openBindings(row) }, () => 'Проекты'),
       h(NPopconfirm, {
@@ -166,7 +177,17 @@ onMounted(load);
         <NButton @click="load">Найти</NButton>
         <NButton type="primary" @click="openCreate">+ Новый</NButton>
       </NSpace>
-      <NDataTable :columns="columns" :data="items" :loading="loading" :row-key="(row) => row.id" />
+      <div class="t-table-wrap">
+        <NDataTable
+          class="t-data-table"
+          :columns="columns"
+          :data="items"
+          :loading="loading"
+          :row-key="(row) => row.id"
+          :scroll-x="TABLE_SCROLL_X"
+          size="small"
+        />
+      </div>
     </NSpace>
 
     <NModal v-model:show="showForm" preset="card" :title="editing ? 'Изменить субподрядчика' : 'Новый субподрядчик'" style="width:480px">
@@ -225,12 +246,17 @@ onMounted(load);
           Все доступные проекты уже привязаны к этому субподрядчику.
         </p>
 
-        <NDataTable
-          :columns="bindingColumns"
-          :data="bindings"
-          :loading="bindingsLoading"
-          :row-key="(r) => r.projectOid"
-        />
+        <div class="t-table-wrap">
+          <NDataTable
+            class="t-data-table"
+            :columns="bindingColumns"
+            :data="bindings"
+            :loading="bindingsLoading"
+            :row-key="(r) => r.projectOid"
+            :scroll-x="520"
+            size="small"
+          />
+        </div>
       </NSpace>
     </NModal>
   </NCard>

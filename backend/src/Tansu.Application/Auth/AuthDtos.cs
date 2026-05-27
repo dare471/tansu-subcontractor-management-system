@@ -9,7 +9,8 @@ public sealed record LoginResponse(
     string Email,
     string UserType,
     Guid? SubcontractorId,
-    bool MustChangePassword);
+    bool MustChangePassword,
+    Guid? EmployeeId = null);
 
 public sealed record ChangePasswordRequest(string OldPassword, string NewPassword);
 
@@ -23,4 +24,5 @@ public sealed record MeResponse(
     string? SubcontractorName,
     string? SubcontractorBin,
     string? ApproverRole,
-    bool MustChangePassword);
+    bool MustChangePassword,
+    Guid? EmployeeId = null);

@@ -3,10 +3,11 @@ import { ref, onMounted, computed, h } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   NCard, NSpace, NInput, NButton, NDataTable, NModal, NForm, NFormItem,
-  NAvatar, NSelect, NPopconfirm, NTag, NAlert, NEllipsis, useMessage,
+  NSelect, NPopconfirm, NTag, NAlert, NEllipsis, useMessage,
   type DataTableColumns
 } from 'naive-ui';
 import { employeesApi, type Employee } from '@/api/employees';
+import EmployeePhotoAvatar from '@/components/EmployeePhotoAvatar.vue';
 import { authApi, type MyProject } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
 import { toApiError } from '@/api/client';
@@ -90,6 +91,7 @@ async function uploadPhoto(file: File) {
   if (!photoUploadFor.value) return;
   try {
     await employeesApi.uploadPhoto(photoUploadFor.value.id, file);
+    employeesApi.invalidatePhotoCache(photoUploadFor.value.id);
     msg.success('Фото загружено');
     await load();
   } catch (e) { msg.error(toApiError(e).detail); }
@@ -160,9 +162,12 @@ const TABLE_SCROLL_X = 1640;
 const columns: DataTableColumns<Employee> = [
   {
     title: 'Фото', key: 'photo', width: 72, align: 'center',
-    render: (row) => row.photoPath
-      ? h(NAvatar, { round: false, src: employeesApi.photoUrl(row.id), size: 40 })
-      : h(NAvatar, { round: false, size: 40 }, () => row.fullName?.[0] ?? '?')
+    render: (row) => h(EmployeePhotoAvatar, {
+      employeeId: row.id,
+      fullName: row.fullName,
+      photoPath: row.photoPath,
+      size: 40
+    })
   },
   {
     title: 'ФИО', key: 'fullName', width: 200,

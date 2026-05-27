@@ -12,6 +12,7 @@ public class User
     public string UserType { get; set; } = Enums.UserType.Subcontractor;
 
     public Guid? SubcontractorId { get; set; }
+    public Guid? EmployeeId { get; set; }
 
     public string? ApproverRole { get; set; }
 
@@ -20,4 +21,5 @@ public class User
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public Subcontractor? Subcontractor { get; set; }
+    public Employee? Employee { get; set; }
 }

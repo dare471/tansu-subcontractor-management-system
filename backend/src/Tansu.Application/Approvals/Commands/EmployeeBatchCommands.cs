@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Tansu.Application.Approvals;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Application.EmployeePortal.Commands;
 using Tansu.Domain.Entities;
 using Tansu.Domain.Enums;
 
@@ -194,7 +195,8 @@ public sealed record SubmitEmployeeBatchCommand(Guid BatchId) : IRequest<BatchSu
 public sealed class SubmitEmployeeBatchHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
-    IPublishEndpoint publisher)
+    IPublishEndpoint publisher,
+    IMediator mediator)
     : IRequestHandler<SubmitEmployeeBatchCommand, BatchSubmitResultDto>
 {
     public async Task<BatchSubmitResultDto> Handle(SubmitEmployeeBatchCommand req, CancellationToken ct)
@@ -237,6 +239,9 @@ public sealed class SubmitEmployeeBatchHandler(
             await EmployeeBatchCore.PublishBatchNotificationsAsync(
                 publisher, batch, initiator, firstPrepared.FirstApprover, employees, ct);
         }
+
+        foreach (var item in items)
+            await mediator.Send(new ProvisionEmployeePortalCommand(item.EmployeeId), ct);
 
         return new BatchSubmitResultDto(batch.Id, batch.Title, items.Count, items);
     }

@@ -1,6 +1,7 @@
 using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Tansu.Application.AccessPasses.Commands;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Contracts.Messages;
@@ -13,7 +14,8 @@ public sealed record ApproveCommand(Guid SheetId, string? Comment) : IRequest<Un
 public sealed class ApproveHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
-    IPublishEndpoint publisher) : IRequestHandler<ApproveCommand, Unit>
+    IPublishEndpoint publisher,
+    IMediator mediator) : IRequestHandler<ApproveCommand, Unit>
 {
     public async Task<Unit> Handle(ApproveCommand req, CancellationToken ct)
     {
@@ -66,6 +68,9 @@ public sealed class ApproveHandler(
                 employee.ProjectOid,
                 initiator.Id, initiator.Email,
                 DateTimeOffset.UtcNow), ct);
+
+            await mediator.Send(new IssueEmployeeAccessPassCommand(employee.Id), ct);
+            await mediator.Send(new EmployeePortal.Commands.ProvisionEmployeePortalCommand(employee.Id), ct);
         }
 
         return Unit.Value;

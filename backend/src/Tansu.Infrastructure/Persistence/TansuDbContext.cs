@@ -22,6 +22,11 @@ public class TansuDbContext : DbContext, ITansuDbContext
     public DbSet<DocumentRequest> DocumentRequests => Set<DocumentRequest>();
     public DbSet<DocumentRequestMatrixEntry> DocumentApprovalMatrix => Set<DocumentRequestMatrixEntry>();
     public DbSet<DocumentApprovalSheetEntry> DocumentApprovalSheet => Set<DocumentApprovalSheetEntry>();
+    public DbSet<EmployeeAccessPass> EmployeeAccessPasses => Set<EmployeeAccessPass>();
+    public DbSet<EmployeeSiteVisit> EmployeeSiteVisits => Set<EmployeeSiteVisit>();
+    public DbSet<EmployeeSafetyQuizCompletion> EmployeeSafetyQuizCompletions =>
+        Set<EmployeeSafetyQuizCompletion>();
+    public DbSet<EmployeePpeIssuance> EmployeePpeIssuances => Set<EmployeePpeIssuance>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {

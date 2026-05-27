@@ -5,7 +5,8 @@ export type Subcontractor = {
   name: string;
   bin: string;
   projectsCount: number;
-  usersCount: number;
+  employeesApprovedCount: number;
+  employeesNotApprovedCount: number;
   createdAt: string;
 };
 

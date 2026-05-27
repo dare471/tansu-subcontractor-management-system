@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { authApi, type LoginResponse, type MeResponse } from '@/api/auth';
+import { employeesApi } from '@/api/employees';
 
 type AuthState = {
   token: string | null;
@@ -43,13 +44,16 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     async changePassword(oldPassword: string, newPassword: string) {
-      await authApi.changePassword(oldPassword, newPassword);
+      const res = await authApi.changePassword(oldPassword, newPassword);
+      this.token = res.accessToken;
+      localStorage.setItem('tansu.token', res.accessToken);
       await this.fetchMe();
     },
     async fetchMe() {
       this.user = await authApi.me();
     },
     logout() {
+      employeesApi.clearPhotoCache();
       this.token = null;
       this.user = null;
       localStorage.removeItem('tansu.token');

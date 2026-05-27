@@ -45,11 +45,11 @@ public static class AuthEndpoints
             IMediator mediator,
             CancellationToken ct) =>
         {
-            await mediator.Send(new ChangePasswordCommand(req.OldPassword, req.NewPassword), ct);
-            return Results.NoContent();
+            var res = await mediator.Send(new ChangePasswordCommand(req.OldPassword, req.NewPassword), ct);
+            return Results.Ok(res);
         })
         .RequireAuthorization()
-        .WithSummary("Смена собственного пароля субподрядчиком.");
+        .WithSummary("Смена собственного пароля (субподрядчик или сотрудник).");
 
         group.MapGet("/me", async (IMediator mediator, CancellationToken ct) =>
         {

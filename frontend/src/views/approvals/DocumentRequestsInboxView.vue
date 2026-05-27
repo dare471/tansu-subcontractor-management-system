@@ -59,16 +59,27 @@ async function confirm() {
   finally { submitting.value = false; }
 }
 
+const TABLE_SCROLL_X = 1320;
+
 const columns: DataTableColumns<DocumentRequestInboxItem> = [
   { title: 'Тип', key: 'requestType', width: 140, render: (r) => requestTypeLabel(r.requestType) },
-  { title: 'Тема', key: 'title' },
-  { title: 'Субподрядчик', key: 'subcontractorName' },
-  { title: 'Проект', key: 'projectName' },
-  { title: 'Ваша роль', key: 'approverRole', width: 130, render: (r) => approverRoleLabel(r.approverRole) },
-  { title: 'Шаг', key: 'orderNo', width: 70 },
   {
-    title: 'Действия', key: 'a', width: 260,
-    render: (row) => h(NSpace, { size: 'small' }, () => [
+    title: 'Тема', key: 'title', width: 280,
+    ellipsis: { tooltip: true }
+  },
+  {
+    title: 'Субподрядчик', key: 'subcontractorName', width: 220,
+    ellipsis: { tooltip: true }
+  },
+  {
+    title: 'Проект', key: 'projectName', width: 220,
+    ellipsis: { tooltip: true }
+  },
+  { title: 'Ваша роль', key: 'approverRole', width: 130, render: (r) => approverRoleLabel(r.approverRole) },
+  { title: 'Шаг', key: 'orderNo', width: 70, align: 'center' },
+  {
+    title: 'Действия', key: 'actions', width: 260,
+    render: (row) => h(NSpace, { size: 'small', wrap: false }, () => [
       h(NButton, { size: 'small', type: 'success', onClick: () => openApprove(row) }, () => 'Согласовать'),
       h(NButton, { size: 'small', type: 'error', onClick: () => openReject(row) }, () => 'Отклонить')
     ])
@@ -82,7 +93,17 @@ onMounted(load);
   <NCard title="Входящие заявки">
     <NSpace vertical>
       <NButton @click="load">Обновить</NButton>
-      <NDataTable :columns="columns" :data="items" :loading="loading" :row-key="(r) => r.sheetId" />
+      <div class="t-table-wrap">
+        <NDataTable
+          class="t-data-table"
+          :columns="columns"
+          :data="items"
+          :loading="loading"
+          :row-key="(r) => r.sheetId"
+          :scroll-x="TABLE_SCROLL_X"
+          size="small"
+        />
+      </div>
     </NSpace>
 
     <NModal

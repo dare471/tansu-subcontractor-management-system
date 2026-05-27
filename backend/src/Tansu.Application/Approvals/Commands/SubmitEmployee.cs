@@ -1,8 +1,10 @@
 using MediatR;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using Tansu.Application.AccessPasses.Commands;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Application.EmployeePortal.Commands;
 
 namespace Tansu.Application.Approvals.Commands;
 
@@ -11,13 +13,17 @@ public sealed record SubmitEmployeeCommand(Guid EmployeeId) : IRequest<Guid>;
 public sealed class SubmitEmployeeHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
-    IPublishEndpoint publisher)
+    IPublishEndpoint publisher,
+    IMediator mediator)
     : IRequestHandler<SubmitEmployeeCommand, Guid>
 {
     public async Task<Guid> Handle(SubmitEmployeeCommand req, CancellationToken ct)
     {
         var employee = await EmployeeSubmitCore.LoadEmployeeForSubmitAsync(
             db, req.EmployeeId, currentUser, ct);
+
+        await mediator.Send(new RevokeEmployeeAccessPassesCommand(req.EmployeeId), ct);
+        await mediator.Send(new EmployeePortal.Commands.DeactivateEmployeePortalCommand(req.EmployeeId), ct);
 
         await EmployeeSubmitCore.EnsureSubmittableAsync(db, employee, null, ct);
 
@@ -32,6 +38,8 @@ public sealed class SubmitEmployeeHandler(
 
         await EmployeeSubmitCore.PublishIndividualNotificationsAsync(
             publisher, employee, initiator, prepared, ct);
+
+        await mediator.Send(new ProvisionEmployeePortalCommand(req.EmployeeId), ct);
 
         return prepared.RoundId;
     }

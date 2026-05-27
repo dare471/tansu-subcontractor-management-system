@@ -47,6 +47,15 @@ public sealed class CurrentUserAccessor(IHttpContextAccessor accessor) : ICurren
         }
     }
 
+    public Guid? EmployeeId
+    {
+        get
+        {
+            var raw = Principal?.FindFirstValue("employee_id");
+            return Guid.TryParse(raw, out var id) ? id : null;
+        }
+    }
+
     public bool MustChangePassword =>
         string.Equals(Principal?.FindFirstValue("must_change_password"), "true", StringComparison.OrdinalIgnoreCase);
 }

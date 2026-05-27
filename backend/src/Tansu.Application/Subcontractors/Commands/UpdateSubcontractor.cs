@@ -3,6 +3,9 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Application.Employees;
+using Tansu.Domain.Entities;
+using Tansu.Domain.Enums;
 
 namespace Tansu.Application.Subcontractors.Commands;
 
@@ -24,7 +27,6 @@ public sealed class UpdateSubcontractorHandler(ITansuDbContext db)
     {
         var entity = await db.Subcontractors
             .Include(x => x.Projects)
-            .Include(x => x.Users)
             .FirstOrDefaultAsync(x => x.Id == req.Id, ct)
             ?? throw new NotFoundException("Subcontractor", req.Id);
 
@@ -38,8 +40,39 @@ public sealed class UpdateSubcontractorHandler(ITansuDbContext db)
         entity.Bin = req.Bin.Trim();
         await db.SaveChangesAsync(ct);
 
+        var employeeIds = await db.Employees.AsNoTracking()
+            .Where(e => e.SubcontractorId == entity.Id)
+            .Select(e => e.Id)
+            .ToListAsync(ct);
+
+        var approved = 0;
+        var notApproved = 0;
+
+        if (employeeIds.Count > 0)
+        {
+            var sheets = await db.ApprovalSheet.AsNoTracking()
+                .Where(a => employeeIds.Contains(a.EmployeeId))
+                .ToListAsync(ct);
+
+            var sheetsByEmployee = sheets
+                .GroupBy(s => s.EmployeeId)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<ApprovalSheetEntry>)g.ToList());
+
+            foreach (var employeeId in employeeIds)
+            {
+                sheetsByEmployee.TryGetValue(employeeId, out var employeeSheets);
+                employeeSheets ??= Array.Empty<ApprovalSheetEntry>();
+                var status = EmployeeStatusResolver.ResolveFromSheets(employeeSheets);
+
+                if (status == ApprovalStatus.Approved)
+                    approved++;
+                else
+                    notApproved++;
+            }
+        }
+
         return new SubcontractorDto(
             entity.Id, entity.Name, entity.Bin,
-            entity.Projects.Count, entity.Users.Count, entity.CreatedAt);
+            entity.Projects.Count, approved, notApproved, entity.CreatedAt);
     }
 }

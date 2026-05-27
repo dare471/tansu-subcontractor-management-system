@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Tansu.Application.Approvals;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Domain.Entities;
@@ -120,21 +119,6 @@ public sealed class ListEmployeesHandler(ITansuDbContext db, ICurrentUser curren
         }).ToList();
     }
 
-    private static string? ResolveEmployeeStatus(IReadOnlyList<ApprovalSheetEntry> sheets)
-    {
-        if (sheets.Count == 0)
-            return null;
-
-        var latestRoundId = sheets
-            .OrderByDescending(s => s.CreatedAt)
-            .First()
-            .RoundId;
-
-        var roundSheets = sheets
-            .Where(s => s.RoundId == latestRoundId)
-            .ToList();
-
-        var roundStatus = ApprovalStatusCalculator.DetermineRoundStatus(roundSheets.Select(s => s.Status));
-        return roundStatus == "draft" ? null : roundStatus;
-    }
+    private static string? ResolveEmployeeStatus(IReadOnlyList<ApprovalSheetEntry> sheets) =>
+        EmployeeStatusResolver.ResolveFromSheets(sheets);
 }

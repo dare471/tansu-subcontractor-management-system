@@ -21,6 +21,12 @@ public sealed class UploadPhotoHandler(
         var e = await db.Employees.FirstOrDefaultAsync(x => x.Id == req.EmployeeId, ct)
             ?? throw new NotFoundException("Employee", req.EmployeeId);
 
+        if (currentUser.UserType == UserType.Employee &&
+            currentUser.EmployeeId != req.EmployeeId)
+        {
+            throw new ForbiddenException();
+        }
+
         if (currentUser.UserType == UserType.Subcontractor &&
             currentUser.SubcontractorId != e.SubcontractorId)
         {

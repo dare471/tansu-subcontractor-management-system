@@ -85,6 +85,13 @@ public static class JwtSetup
                 p.AddAuthenticationSchemes(AuthSchemes.LocalJwt);
                 p.RequireClaim("user_type", UserType.Subcontractor);
             });
+
+            o.AddPolicy(AuthPolicies.EmployeeOnly, p =>
+            {
+                p.RequireAuthenticatedUser();
+                p.AddAuthenticationSchemes(AuthSchemes.LocalJwt);
+                p.RequireClaim("user_type", UserType.Employee);
+            });
         });
 
         services.AddScoped<EntraUserProvisioner>();

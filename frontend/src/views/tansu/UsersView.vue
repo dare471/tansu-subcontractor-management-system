@@ -94,17 +94,31 @@ async function resetPwd(row: User) {
   } catch (e) { msg.error(toApiError(e).detail); }
 }
 
+const TABLE_SCROLL_X = 1390;
+
 const columns: DataTableColumns<User> = [
-  { title: 'ФИО', key: 'fullName' },
-  { title: 'Email', key: 'email' },
-  { title: 'Должность', key: 'position' },
+  {
+    title: 'ФИО', key: 'fullName', width: 200,
+    ellipsis: { tooltip: true }
+  },
+  {
+    title: 'Email', key: 'email', width: 240,
+    ellipsis: { tooltip: true }
+  },
+  {
+    title: 'Должность', key: 'position', width: 180,
+    ellipsis: { tooltip: true }
+  },
   { title: 'Тип', key: 'userType', width: 130,
     render: (r) => h(NTag, { type: r.userType === 'TANSU' ? 'info' : 'success' }, () => r.userType) },
-  { title: 'Субподрядчик', key: 'subcontractorName' },
+  {
+    title: 'Субподрядчик', key: 'subcontractorName', width: 260,
+    ellipsis: { tooltip: true }
+  },
   { title: 'Активен', key: 'isActive', width: 100,
     render: (r) => h(NTag, { type: r.isActive ? 'success' : 'default' }, () => r.isActive ? 'Да' : 'Нет') },
   { title: 'Действия', key: 'actions', width: 280,
-    render: (row) => h(NSpace, { size: 'small' }, () => [
+    render: (row) => h(NSpace, { size: 'small', wrap: false }, () => [
       h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => 'Изменить'),
       row.userType === 'Subcontractor'
         ? h(NButton, { size: 'small', type: 'warning', onClick: () => resetPwd(row) }, () => 'Сбросить пароль')
@@ -136,7 +150,17 @@ onMounted(async () => { await Promise.all([load(), loadSubs()]); });
         <NButton @click="load">Найти</NButton>
         <NButton type="primary" @click="openCreate">+ Новый</NButton>
       </NSpace>
-      <NDataTable :columns="columns" :data="items" :loading="loading" :row-key="(r) => r.id" />
+      <div class="t-table-wrap">
+        <NDataTable
+          class="t-data-table"
+          :columns="columns"
+          :data="items"
+          :loading="loading"
+          :row-key="(r) => r.id"
+          :scroll-x="TABLE_SCROLL_X"
+          size="small"
+        />
+      </div>
     </NSpace>
 
     <NModal v-model:show="showForm" preset="card" :title="editing ? 'Изменить пользователя' : 'Новый пользователь'" style="width:520px">

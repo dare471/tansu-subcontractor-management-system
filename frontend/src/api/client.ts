@@ -8,10 +8,17 @@ export const apiClient: AxiosInstance = axios.create({
 });
 
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem('tansu.token');
-  if (token) {
-    config.headers = config.headers ?? {};
-    config.headers['Authorization'] = `Bearer ${token}`;
+  const url = String(config.url ?? '');
+  const isAnonymousAuth =
+    url.includes('/api/auth/login') ||
+    url.includes('/api/auth/dev-login');
+
+  if (!isAnonymousAuth) {
+    const token = localStorage.getItem('tansu.token');
+    if (token) {
+      config.headers = config.headers ?? {};
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
   }
   return config;
 });
@@ -36,10 +43,14 @@ apiClient.interceptors.response.use(
   (r) => r,
   (error) => {
     const status = error?.response?.status;
-    if (status === 401) {
+    const requestUrl = String(error?.config?.url ?? '');
+    const isAuthRequest =
+      requestUrl.includes('/api/auth/login') ||
+      requestUrl.includes('/api/auth/dev-login');
+
+    if (status === 401 && !isAuthRequest) {
       localStorage.removeItem('tansu.token');
-      const path = window.location.pathname;
-      if (!path.startsWith('/login')) {
+      if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login';
       }
     }
