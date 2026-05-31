@@ -24,6 +24,7 @@ const bindTarget = ref<Subcontractor | null>(null);
 const bindings = ref<ProjectBinding[]>([]);
 const projects = ref<Project[]>([]);
 const selectedProjectOid = ref<string | null>(null);
+const bindActivityType = ref('');
 const bindingsLoading = ref(false);
 const bindingSaving = ref(false);
 
@@ -70,6 +71,7 @@ async function openBindings(row: Subcontractor) {
   bindTarget.value = row;
   showBindings.value = true;
   selectedProjectOid.value = null;
+  bindActivityType.value = '';
   bindingsLoading.value = true;
   try {
     const [bound, all] = await Promise.all([
@@ -99,16 +101,22 @@ const availableProjectOptions = computed<SelectOption[]>(() => {
 
 async function bindProject() {
   if (!bindTarget.value || !selectedProjectOid.value) return;
+  if (!bindActivityType.value.trim()) {
+    msg.warning('Укажите вид деятельности на проекте');
+    return;
+  }
   bindingSaving.value = true;
   try {
     const project = projects.value.find((p) => p.projectOid === selectedProjectOid.value);
     await subcontractorsApi.bindProject(
       bindTarget.value.id,
       selectedProjectOid.value,
+      bindActivityType.value.trim(),
       project?.name ?? undefined
     );
     bindings.value = await subcontractorsApi.projects(bindTarget.value.id);
     selectedProjectOid.value = null;
+    bindActivityType.value = '';
     await load();
     msg.success('Проект привязан');
   } catch (e) { msg.error(toApiError(e).detail); }
@@ -157,8 +165,18 @@ const columns: DataTableColumns<Subcontractor> = [
 ];
 
 const bindingColumns = [
-  { title: 'OID', key: 'projectOid', width: 320 },
-  { title: 'Название', key: 'name', render: (row: ProjectBinding) => row.name || '—' },
+  { title: 'OID', key: 'projectOid', width: 280, ellipsis: { tooltip: true } },
+  { title: 'Название', key: 'name', width: 180, render: (row: ProjectBinding) => row.name || '—' },
+  { title: 'Вид деятельности', key: 'activityType', width: 200, ellipsis: { tooltip: true } },
+  {
+    title: '% выполнения', key: 'completionPercent', width: 110,
+    render: (row: ProjectBinding) => `${row.completionPercent}%`
+  },
+  {
+    title: 'Отчёт', key: 'progressReportedAt', width: 140,
+    render: (row: ProjectBinding) =>
+      row.progressReportedAt ? new Date(row.progressReportedAt).toLocaleDateString('ru-RU') : '—'
+  },
   {
     title: '', key: 'a', width: 120,
     render: (row: ProjectBinding) =>
@@ -222,24 +240,32 @@ onMounted(load);
           </NEmpty>
         </div>
 
-        <NSpace v-else align="center" style="width:100%">
-          <NSelect
-            v-model:value="selectedProjectOid"
-            :options="availableProjectOptions"
-            placeholder="Выберите проект для привязки"
-            filterable
-            clearable
-            style="flex:1;min-width:320px"
-            :disabled="bindingsLoading || !availableProjectOptions.length"
-          />
-          <NButton
-            type="primary"
-            :disabled="!selectedProjectOid"
-            :loading="bindingSaving"
-            @click="bindProject"
-          >
-            Привязать
-          </NButton>
+        <NSpace v-else vertical :size="12" style="width:100%">
+          <NSpace align="center" style="width:100%">
+            <NSelect
+              v-model:value="selectedProjectOid"
+              :options="availableProjectOptions"
+              placeholder="Выберите проект для привязки"
+              filterable
+              clearable
+              style="flex:1;min-width:280px"
+              :disabled="bindingsLoading || !availableProjectOptions.length"
+            />
+            <NInput
+              v-model:value="bindActivityType"
+              placeholder="Вид деятельности на проекте"
+              style="flex:1;min-width:240px"
+              :disabled="bindingsLoading"
+            />
+            <NButton
+              type="primary"
+              :disabled="!selectedProjectOid || !bindActivityType.trim()"
+              :loading="bindingSaving"
+              @click="bindProject"
+            >
+              Привязать
+            </NButton>
+          </NSpace>
         </NSpace>
 
         <p v-if="projects.length && !availableProjectOptions.length && !bindingsLoading" style="color:var(--brand-text-muted);font-size:13px;margin:0">
@@ -253,7 +279,7 @@ onMounted(load);
             :data="bindings"
             :loading="bindingsLoading"
             :row-key="(r) => r.projectOid"
-            :scroll-x="520"
+            :scroll-x="980"
             size="small"
           />
         </div>

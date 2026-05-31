@@ -7,7 +7,12 @@ namespace Tansu.Application.Subcontractors.Queries;
 public sealed record ListProjectsForSubcontractorQuery(Guid SubcontractorId)
     : IRequest<IReadOnlyList<ProjectBindingDto>>;
 
-public sealed record ProjectBindingDto(Guid ProjectOid, string? Name);
+public sealed record ProjectBindingDto(
+    Guid ProjectOid,
+    string? Name,
+    string ActivityType,
+    int CompletionPercent,
+    DateTimeOffset? ProgressReportedAt);
 
 public sealed class ListProjectsForSubcontractorHandler(ITansuDbContext db)
     : IRequestHandler<ListProjectsForSubcontractorQuery, IReadOnlyList<ProjectBindingDto>>
@@ -19,7 +24,12 @@ public sealed class ListProjectsForSubcontractorHandler(ITansuDbContext db)
             .AsNoTracking()
             .Where(x => x.SubcontractorId == req.SubcontractorId)
             .OrderBy(x => x.Project!.Name ?? x.ProjectOid.ToString())
-            .Select(x => new ProjectBindingDto(x.ProjectOid, x.Project!.Name))
+            .Select(x => new ProjectBindingDto(
+                x.ProjectOid,
+                x.Project!.Name,
+                x.ActivityType,
+                x.CompletionPercent,
+                x.ProgressReportedAt))
             .ToListAsync(ct);
     }
 }

@@ -1,10 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Application.Projects;
 
 namespace Tansu.Application.Projects.Queries;
-
-public sealed record ProjectDto(Guid ProjectOid, string? Name, int SubcontractorsCount);
 
 public sealed record ListProjectsQuery(string? Search) : IRequest<IReadOnlyList<ProjectDto>>;
 

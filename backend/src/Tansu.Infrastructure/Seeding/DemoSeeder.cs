@@ -94,12 +94,18 @@ public static class DemoSeeder
         ctx.ProjectSubcontractors.Add(new ProjectSubcontractor
         {
             ProjectOid = DemoSeedData.ProjectKeremetOid,
-            SubcontractorId = subMontazh.Id
+            SubcontractorId = subMontazh.Id,
+            ActivityType = "Монтажные работы",
+            CompletionPercent = 35,
+            ProgressReportedAt = DateTimeOffset.UtcNow.AddDays(-3)
         });
         ctx.ProjectSubcontractors.Add(new ProjectSubcontractor
         {
             ProjectOid = DemoSeedData.ProjectAbayTowerOid,
-            SubcontractorId = subEnergo.Id
+            SubcontractorId = subEnergo.Id,
+            ActivityType = "Электромонтажные работы",
+            CompletionPercent = 62,
+            ProgressReportedAt = DateTimeOffset.UtcNow.AddDays(-1)
         });
 
         var approverUsers = new List<User>();
@@ -311,7 +317,10 @@ public static class DemoSeeder
             ctx.ProjectSubcontractors.Add(new ProjectSubcontractor
             {
                 ProjectOid = DemoSeedData.ProjectKeremetOid,
-                SubcontractorId = montazh.Id
+                SubcontractorId = montazh.Id,
+                ActivityType = "Монтажные работы",
+                CompletionPercent = 35,
+                ProgressReportedAt = DateTimeOffset.UtcNow.AddDays(-3)
             });
             changed = true;
         }
@@ -322,7 +331,10 @@ public static class DemoSeeder
             ctx.ProjectSubcontractors.Add(new ProjectSubcontractor
             {
                 ProjectOid = DemoSeedData.ProjectAbayTowerOid,
-                SubcontractorId = energo.Id
+                SubcontractorId = energo.Id,
+                ActivityType = "Электромонтажные работы",
+                CompletionPercent = 62,
+                ProgressReportedAt = DateTimeOffset.UtcNow.AddDays(-1)
             });
             changed = true;
         }

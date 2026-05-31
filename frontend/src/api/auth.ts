@@ -42,7 +42,14 @@ export type MeResponse = {
   permissions: TansuPermissions | null;
 };
 
-export type MyProject = { projectOid: string; name: string | null; hasApprovalMatrix: boolean };
+export type MyProject = {
+  projectOid: string;
+  name: string | null;
+  hasApprovalMatrix: boolean;
+  activityType: string;
+  completionPercent: number;
+  progressReportedAt: string | null;
+};
 
 export const authApi = {
   login: (email: string, password: string) =>
@@ -58,5 +65,8 @@ export const authApi = {
 
   me: () => apiClient.get<MeResponse>('/api/auth/me').then((r) => r.data),
 
-  myProjects: () => apiClient.get<MyProject[]>('/api/auth/me/projects').then((r) => r.data)
+  myProjects: () => apiClient.get<MyProject[]>('/api/auth/me/projects').then((r) => r.data),
+
+  reportProjectProgress: (projectOid: string, completionPercent: number) =>
+    apiClient.put(`/api/auth/me/projects/${projectOid}/progress`, { completionPercent })
 };

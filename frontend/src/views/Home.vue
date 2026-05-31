@@ -84,6 +84,7 @@ const tansuQuickActions = [
 const subQuickActions = [
   { label: 'Добавить сотрудника', icon: AddCircleOutline, to: 'employees' },
   { label: 'Пакеты согласования', icon: IdCardOutline, to: 'employee-batches' },
+  { label: 'Отчётность по проектам', icon: BusinessOutline, to: 'project-progress' },
   { label: 'Новая заявка', icon: DocumentTextOutline, to: 'document-requests' }
 ];
 

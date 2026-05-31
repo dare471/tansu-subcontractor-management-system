@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, h } from 'vue';
+import { useRouter } from 'vue-router';
 import { NCard, NSpace, NInput, NButton, NDataTable, NModal, NForm, NFormItem, useMessage } from 'naive-ui';
 import { projectsApi, type Project } from '@/api/projects';
 import { toApiError } from '@/api/client';
 
+const router = useRouter();
 const msg = useMessage();
 const items = ref<Project[]>([]);
 const loading = ref(false);
@@ -28,10 +30,23 @@ async function register() {
   } catch (e) { msg.error(toApiError(e).detail); }
 }
 
+function openProject(row: Project) {
+  router.push({ name: 'project-detail', params: { projectOid: row.projectOid } });
+}
+
 const columns = [
+  {
+    title: 'Название', key: 'name',
+    render: (row: Project) => row.name ?? '—',
+    ellipsis: { tooltip: true }
+  },
   { title: 'OID проекта', key: 'projectOid', width: 320 },
-  { title: 'Название', key: 'name' },
-  { title: 'Привязано субподрядчиков', key: 'subcontractorsCount', width: 220 }
+  { title: 'Субподрядчиков', key: 'subcontractorsCount', width: 160 },
+  {
+    title: '', key: 'open', width: 120,
+    render: (row: Project) =>
+      h(NButton, { size: 'small', onClick: () => openProject(row) }, () => 'Открыть')
+  }
 ];
 
 onMounted(load);
@@ -45,7 +60,17 @@ onMounted(load);
         <NButton @click="load">Найти</NButton>
         <NButton type="primary" @click="showForm = true">+ Зарегистрировать</NButton>
       </NSpace>
-      <NDataTable :columns="columns" :data="items" :loading="loading" :row-key="(r) => r.projectOid" />
+      <div class="t-table-wrap">
+        <NDataTable
+          class="t-data-table"
+          :columns="columns"
+          :data="items"
+          :loading="loading"
+          :row-key="(r) => r.projectOid"
+          size="small"
+          :row-props="(row) => ({ style: 'cursor:pointer', onClick: () => openProject(row) })"
+        />
+      </div>
     </NSpace>
 
     <NModal v-model:show="showForm" preset="card" title="Регистрация проекта" style="width:480px">

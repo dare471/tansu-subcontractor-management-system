@@ -20,7 +20,24 @@ export type User = {
   subcontractorNames: string[];
   mustChangePassword: boolean;
   isActive: boolean;
+  blockReason: string | null;
   createdAt: string;
+};
+
+export type UserBlockRecord = {
+  id: string;
+  userId: string;
+  initiatedByUserId: string;
+  initiatedByFullName: string;
+  actionType: 'block' | 'unblock';
+  reason: string;
+  createdAt: string;
+};
+
+export type UserBlockStatus = {
+  isBlocked: boolean;
+  lastRecord: UserBlockRecord | null;
+  history: UserBlockRecord[];
 };
 
 export type CreateUserResponse = { user: User; temporaryPassword: string | null };
@@ -29,6 +46,7 @@ export type UpdateUserPayload = {
   fullName: string;
   position: string;
   isActive: boolean;
+  statusComment?: string | null;
   approverRole?: string | null;
   tansuRole?: string | null;
   managerUserId?: string | null;
@@ -59,6 +77,8 @@ export const usersApi = {
     apiClient.post<CreateUserResponse>('/api/users', payload).then((r) => r.data),
   update: (id: string, payload: UpdateUserPayload) =>
     apiClient.put<User>(`/api/users/${id}`, payload).then((r) => r.data),
+  blocks: (id: string) =>
+    apiClient.get<UserBlockStatus>(`/api/users/${id}/blocks`).then((r) => r.data),
   resetPassword: (id: string) =>
     apiClient
       .post<{ temporaryPassword: string }>(`/api/users/${id}/reset-password`)

@@ -1,3 +1,4 @@
+using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Tansu.Application.Common.Exceptions;
@@ -6,8 +7,20 @@ using Tansu.Domain.Entities;
 
 namespace Tansu.Application.Subcontractors.Commands;
 
-public sealed record BindProjectCommand(Guid SubcontractorId, Guid ProjectOid, string? ProjectName)
+public sealed record BindProjectCommand(
+    Guid SubcontractorId,
+    Guid ProjectOid,
+    string? ProjectName,
+    string ActivityType)
     : IRequest<Unit>;
+
+public sealed class BindProjectValidator : AbstractValidator<BindProjectCommand>
+{
+    public BindProjectValidator()
+    {
+        RuleFor(x => x.ActivityType).NotEmpty().MaximumLength(500);
+    }
+}
 
 public sealed class BindProjectHandler(ITansuDbContext db) : IRequestHandler<BindProjectCommand, Unit>
 {
@@ -27,16 +40,21 @@ public sealed class BindProjectHandler(ITansuDbContext db) : IRequestHandler<Bin
             project.Name = req.ProjectName;
         }
 
-        var exists = await db.ProjectSubcontractors.AnyAsync(
+        var link = await db.ProjectSubcontractors.FirstOrDefaultAsync(
             x => x.ProjectOid == req.ProjectOid && x.SubcontractorId == req.SubcontractorId, ct);
 
-        if (!exists)
+        if (link is null)
         {
             db.ProjectSubcontractors.Add(new ProjectSubcontractor
             {
                 ProjectOid = req.ProjectOid,
-                SubcontractorId = req.SubcontractorId
+                SubcontractorId = req.SubcontractorId,
+                ActivityType = req.ActivityType.Trim()
             });
+        }
+        else
+        {
+            link.ActivityType = req.ActivityType.Trim();
         }
 
         await db.SaveChangesAsync(ct);

@@ -70,6 +70,7 @@ const allItems: NavItem[] = [
   },
   { name: 'employees', label: 'Сотрудники', icon: IdCardOutline, roles: ['Subcontractor'] },
   { name: 'employee-batches', label: 'Пакеты согласования', icon: ClipboardOutline, roles: ['Subcontractor'] },
+  { name: 'project-progress', label: 'Отчётность', icon: BusinessOutline, roles: ['Subcontractor'] },
   { name: 'document-requests', label: 'Заявки', icon: DocumentTextOutline, roles: ['Subcontractor'] },
   {
     name: 'approvals-inbox',

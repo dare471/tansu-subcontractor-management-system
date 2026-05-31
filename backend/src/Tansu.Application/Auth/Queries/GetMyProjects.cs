@@ -6,7 +6,13 @@ using Tansu.Domain.Enums;
 
 namespace Tansu.Application.Auth.Queries;
 
-public sealed record MyProjectDto(Guid ProjectOid, string? Name, bool HasApprovalMatrix);
+public sealed record MyProjectDto(
+    Guid ProjectOid,
+    string? Name,
+    bool HasApprovalMatrix,
+    string ActivityType,
+    int CompletionPercent,
+    DateTimeOffset? ProgressReportedAt);
 
 public sealed record GetMyProjectsQuery : IRequest<IReadOnlyList<MyProjectDto>>;
 
@@ -25,7 +31,14 @@ public sealed class GetMyProjectsHandler(ITansuDbContext db, ICurrentUser curren
             .AsNoTracking()
             .Where(x => x.SubcontractorId == subcontractorId)
             .OrderBy(x => x.Project!.Name ?? x.ProjectOid.ToString())
-            .Select(x => new { x.ProjectOid, Name = x.Project!.Name })
+            .Select(x => new
+            {
+                x.ProjectOid,
+                Name = x.Project!.Name,
+                x.ActivityType,
+                x.CompletionPercent,
+                x.ProgressReportedAt
+            })
             .ToListAsync(ct);
 
         if (bindings.Count == 0)
@@ -41,7 +54,13 @@ public sealed class GetMyProjectsHandler(ITansuDbContext db, ICurrentUser curren
         var matrixSet = withMatrix.ToHashSet();
 
         return bindings
-            .Select(b => new MyProjectDto(b.ProjectOid, b.Name, matrixSet.Contains(b.ProjectOid)))
+            .Select(b => new MyProjectDto(
+                b.ProjectOid,
+                b.Name,
+                matrixSet.Contains(b.ProjectOid),
+                b.ActivityType,
+                b.CompletionPercent,
+                b.ProgressReportedAt))
             .ToList();
     }
 }

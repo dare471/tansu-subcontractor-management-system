@@ -65,6 +65,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddSingleton<IPhotoStorage, LocalPhotoStorage>();
         services.AddSingleton<IEmployeeDocumentStorage, LocalEmployeeDocumentStorage>();
+        services.AddSingleton<IProjectDocumentStorage, LocalProjectDocumentStorage>();
         services.AddSingleton<IHikAccessService, StubHikAccessService>();
         services.AddSingleton<IAccessPassQrEncoder, AccessPassQrEncoder>();
         services.AddSingleton<IAccessPassTokenGenerator, AccessPassTokenGenerator>();

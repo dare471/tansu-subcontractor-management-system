@@ -12,6 +12,7 @@ public class TansuDbContext : DbContext, ITansuDbContext
 
     public DbSet<Subcontractor> Subcontractors => Set<Subcontractor>();
     public DbSet<ProjectRef> ProjectRefs => Set<ProjectRef>();
+    public DbSet<ProjectDocument> ProjectDocuments => Set<ProjectDocument>();
     public DbSet<ProjectSubcontractor> ProjectSubcontractors => Set<ProjectSubcontractor>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Employee> Employees => Set<Employee>();
@@ -29,6 +30,7 @@ public class TansuDbContext : DbContext, ITansuDbContext
     public DbSet<EmployeePpeIssuance> EmployeePpeIssuances => Set<EmployeePpeIssuance>();
     public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
     public DbSet<EmployeeBlockRecord> EmployeeBlockRecords => Set<EmployeeBlockRecord>();
+    public DbSet<UserBlockRecord> UserBlockRecords => Set<UserBlockRecord>();
     public DbSet<UserProjectAssignment> UserProjectAssignments => Set<UserProjectAssignment>();
     public DbSet<UserSubcontractorAssignment> UserSubcontractorAssignments => Set<UserSubcontractorAssignment>();
     public DbSet<EmployeePhotoReview> EmployeePhotoReviews => Set<EmployeePhotoReview>();

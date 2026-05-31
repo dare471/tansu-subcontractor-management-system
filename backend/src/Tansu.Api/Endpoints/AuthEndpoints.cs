@@ -4,6 +4,8 @@ using Tansu.Api.Auth;
 using Tansu.Application.Auth;
 using Tansu.Application.Auth.Commands;
 using Tansu.Application.Auth.Queries;
+using Tansu.Application.Projects.Commands;
+using Tansu.Application.Subcontractors;
 
 namespace Tansu.Api.Endpoints;
 
@@ -63,6 +65,18 @@ public static class AuthEndpoints
             Results.Ok(await mediator.Send(new GetMyProjectsQuery(), ct)))
         .RequireAuthorization(AuthPolicies.SubcontractorOnly)
         .WithSummary("Проекты, привязанные к субподрядчику текущего пользователя.");
+
+        group.MapPut("/me/projects/{projectOid:guid}/progress", async (
+            Guid projectOid,
+            [FromBody] ReportProjectProgressRequest body,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            await mediator.Send(new ReportProjectProgressCommand(projectOid, body.CompletionPercent), ct);
+            return Results.NoContent();
+        })
+        .RequireAuthorization(AuthPolicies.SubcontractorOnly)
+        .WithSummary("Отчёт субподрядчика о проценте выполнения работ на проекте.");
 
         return app;
     }

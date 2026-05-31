@@ -330,3 +330,50 @@ CREATE TABLE IF NOT EXISTS subcontract.user_subcontractor_assignments (
 ALTER TABLE subcontract.employee_site_visits ADD COLUMN IF NOT EXISTS checked_out_at timestamptz;
 ALTER TABLE subcontract.employee_site_visits ADD COLUMN IF NOT EXISTS terminal_location varchar(500);
 ALTER TABLE subcontract.employee_site_visits ADD COLUMN IF NOT EXISTS data_source varchar(32) NOT NULL DEFAULT 'face_id';
+
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS customer_name varchar(500);
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS customer_phone varchar(64);
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS customer_email varchar(256);
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS budget_amount numeric(18, 2);
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS budget_currency varchar(8) NOT NULL DEFAULT 'KZT';
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS responsible_admin_user_id uuid
+    REFERENCES subcontract.users(id) ON DELETE SET NULL;
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS project_manager_user_id uuid
+    REFERENCES subcontract.users(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS subcontract.project_documents (
+    id                   uuid PRIMARY KEY,
+    project_oid          uuid NOT NULL REFERENCES subcontract.project_refs(project_oid) ON DELETE CASCADE,
+    name                 varchar(500) NOT NULL,
+    document_type        varchar(32) NOT NULL,
+    file_path            varchar(1024) NOT NULL,
+    content_type         varchar(128),
+    uploaded_at          timestamptz NOT NULL DEFAULT now(),
+    uploaded_by_user_id  uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS ix_project_documents_project
+    ON subcontract.project_documents (project_oid, uploaded_at DESC);
+
+ALTER TABLE subcontract.project_subcontractors ADD COLUMN IF NOT EXISTS activity_type varchar(500) NOT NULL DEFAULT '';
+ALTER TABLE subcontract.project_subcontractors ADD COLUMN IF NOT EXISTS completion_percent integer NOT NULL DEFAULT 0;
+ALTER TABLE subcontract.project_subcontractors ADD COLUMN IF NOT EXISTS progress_reported_at timestamptz;
+ALTER TABLE subcontract.project_subcontractors ADD COLUMN IF NOT EXISTS progress_reported_by_user_id uuid
+    REFERENCES subcontract.users(id) ON DELETE SET NULL;
+
+ALTER TABLE subcontract.project_subcontractors DROP CONSTRAINT IF EXISTS ck_project_subcontractors_completion_percent;
+ALTER TABLE subcontract.project_subcontractors ADD CONSTRAINT ck_project_subcontractors_completion_percent
+    CHECK (completion_percent >= 0 AND completion_percent <= 100);
+
+CREATE TABLE IF NOT EXISTS subcontract.user_block_records (
+    id                   uuid PRIMARY KEY,
+    user_id              uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE CASCADE,
+    initiated_by_user_id uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE RESTRICT,
+    action_type          varchar(16) NOT NULL,
+    reason               varchar(1000) NOT NULL,
+    created_at           timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT ck_user_block_action_type CHECK (action_type IN ('block', 'unblock'))
+);
+
+CREATE INDEX IF NOT EXISTS ix_user_block_records_user
+    ON subcontract.user_block_records (user_id, created_at DESC);

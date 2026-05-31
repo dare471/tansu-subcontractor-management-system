@@ -46,6 +46,7 @@ await using (var scope = app.Services.CreateAsyncScope())
         await DemoAccessPassesSeeder.EnsureAsync(scope.ServiceProvider);
         await DemoEmployeePortalSeeder.EnsureAsync(scope.ServiceProvider);
         await DemoTansuRolesSeeder.EnsureAsync(scope.ServiceProvider);
+        await DemoProjectDetailsSeeder.EnsureAsync(scope.ServiceProvider);
     }
 }
 

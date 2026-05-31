@@ -49,7 +49,7 @@ public static class SubcontractorEndpoints
             Guid id, [FromBody] BindProjectRequest req,
             IMediator m, CancellationToken ct) =>
         {
-            await m.Send(new BindProjectCommand(id, req.ProjectOid, req.ProjectName), ct);
+            await m.Send(new BindProjectCommand(id, req.ProjectOid, req.ProjectName, req.ActivityType), ct);
             return Results.NoContent();
         });
 

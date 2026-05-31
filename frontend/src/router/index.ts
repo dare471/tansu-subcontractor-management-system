@@ -42,6 +42,12 @@ const routes: RouteRecordRaw[] = [
         meta: { roles: ['TANSU'] }
       },
       {
+        path: 'projects/:projectOid',
+        name: 'project-detail',
+        component: () => import('@/views/tansu/ProjectDetailView.vue'),
+        meta: { roles: ['TANSU'] }
+      },
+      {
         path: 'users',
         name: 'users',
         component: () => import('@/views/tansu/UsersView.vue'),
@@ -69,6 +75,12 @@ const routes: RouteRecordRaw[] = [
         path: 'employee-batches',
         name: 'employee-batches',
         component: () => import('@/views/subcontractor/EmployeeBatchesView.vue'),
+        meta: { roles: ['Subcontractor'] }
+      },
+      {
+        path: 'project-progress',
+        name: 'project-progress',
+        component: () => import('@/views/subcontractor/ProjectProgressView.vue'),
         meta: { roles: ['Subcontractor'] }
       },
       {

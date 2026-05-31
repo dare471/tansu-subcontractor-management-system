@@ -38,8 +38,12 @@ public static class UserEndpoints
             Guid id, [FromBody] UpdateUserRequest req,
             IMediator m, CancellationToken ct) =>
                 Results.Ok(await m.Send(new UpdateUserCommand(
-                    id, req.FullName, req.Position, req.IsActive, req.ApproverRole,
+                    id, req.FullName, req.Position, req.IsActive, req.StatusComment, req.ApproverRole,
                     req.TansuRole, req.ManagerUserId, req.ProjectOids, req.SubcontractorIds), ct)));
+
+        g.MapGet("/{id:guid}/blocks", async (
+            Guid id, IMediator m, CancellationToken ct) =>
+                Results.Ok(await m.Send(new GetUserBlockStatusQuery(id), ct)));
 
         g.MapPost("/{id:guid}/reset-password", async (
             Guid id, IMediator m, CancellationToken ct) =>

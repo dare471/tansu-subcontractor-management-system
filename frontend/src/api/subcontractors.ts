@@ -10,7 +10,13 @@ export type Subcontractor = {
   createdAt: string;
 };
 
-export type ProjectBinding = { projectOid: string; name: string | null };
+export type ProjectBinding = {
+  projectOid: string;
+  name: string | null;
+  activityType: string;
+  completionPercent: number;
+  progressReportedAt: string | null;
+};
 
 export const subcontractorsApi = {
   list: (search?: string) =>
@@ -22,8 +28,8 @@ export const subcontractorsApi = {
   remove: (id: string) => apiClient.delete(`/api/subcontractors/${id}`),
   projects: (id: string) =>
     apiClient.get<ProjectBinding[]>(`/api/subcontractors/${id}/projects`).then((r) => r.data),
-  bindProject: (id: string, projectOid: string, projectName?: string) =>
-    apiClient.post(`/api/subcontractors/${id}/projects`, { projectOid, projectName }),
+  bindProject: (id: string, projectOid: string, activityType: string, projectName?: string) =>
+    apiClient.post(`/api/subcontractors/${id}/projects`, { projectOid, projectName, activityType }),
   unbindProject: (id: string, projectOid: string) =>
     apiClient.delete(`/api/subcontractors/${id}/projects/${projectOid}`)
 };

@@ -7,6 +7,7 @@ public interface ITansuDbContext
 {
     DbSet<Subcontractor> Subcontractors { get; }
     DbSet<ProjectRef> ProjectRefs { get; }
+    DbSet<ProjectDocument> ProjectDocuments { get; }
     DbSet<ProjectSubcontractor> ProjectSubcontractors { get; }
     DbSet<User> Users { get; }
     DbSet<Employee> Employees { get; }
@@ -23,6 +24,7 @@ public interface ITansuDbContext
     DbSet<EmployeePpeIssuance> EmployeePpeIssuances { get; }
     DbSet<EmployeeDocument> EmployeeDocuments { get; }
     DbSet<EmployeeBlockRecord> EmployeeBlockRecords { get; }
+    DbSet<UserBlockRecord> UserBlockRecords { get; }
     DbSet<UserProjectAssignment> UserProjectAssignments { get; }
     DbSet<UserSubcontractorAssignment> UserSubcontractorAssignments { get; }
     DbSet<EmployeePhotoReview> EmployeePhotoReviews { get; }

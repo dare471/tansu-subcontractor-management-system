@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Tansu.Application.Auth;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Application.Users.Commands;
 
 namespace Tansu.Application.Users.Queries;
 
@@ -39,13 +40,17 @@ public sealed class ListUsersHandler(
             .OrderBy(u => u.FullName)
             .ToListAsync(ct);
 
-        return users.Select(UserMapper.ToDto).ToList();
+        var blockReasons = await UserBlockReasonLookup.GetManyAsync(db, users, ct);
+
+        return users
+            .Select(u => UserMapper.ToDto(u, blockReasons.GetValueOrDefault(u.Id)))
+            .ToList();
     }
 }
 
 internal static class UserMapper
 {
-    public static UserDto ToDto(Domain.Entities.User u) =>
+    public static UserDto ToDto(Domain.Entities.User u, string? blockReason = null) =>
         new(
             u.Id, u.FullName, u.Position, u.Email, u.UserType,
             u.SubcontractorId,
@@ -58,5 +63,5 @@ internal static class UserMapper
             u.ProjectAssignments.Select(a => a.Project?.Name ?? a.ProjectOid.ToString()).ToList(),
             u.SubcontractorAssignments.Select(a => a.SubcontractorId).ToList(),
             u.SubcontractorAssignments.Select(a => a.Subcontractor?.Name ?? a.SubcontractorId.ToString()).ToList(),
-            u.MustChangePassword, u.IsActive, u.CreatedAt);
+            u.MustChangePassword, u.IsActive, blockReason, u.CreatedAt);
 }

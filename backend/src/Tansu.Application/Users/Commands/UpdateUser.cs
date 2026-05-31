@@ -5,6 +5,7 @@ using Tansu.Application.Auth;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Application.Users.Queries;
+using Tansu.Domain.Entities;
 using Tansu.Domain.Enums;
 
 namespace Tansu.Application.Users.Commands;
@@ -14,6 +15,7 @@ public sealed record UpdateUserCommand(
     string FullName,
     string Position,
     bool IsActive,
+    string? StatusComment,
     string? ApproverRole,
     string? TansuRole,
     Guid? ManagerUserId,
@@ -31,6 +33,7 @@ public sealed class UpdateUserValidator : AbstractValidator<UpdateUserCommand>
 
 public sealed class UpdateUserHandler(
     ITansuDbContext db,
+    ICurrentUser currentUser,
     ITansuAccessService accessService) : IRequestHandler<UpdateUserCommand, UserDto>
 {
     public async Task<UserDto> Handle(UpdateUserCommand req, CancellationToken ct)
@@ -46,9 +49,34 @@ public sealed class UpdateUserHandler(
             .FirstOrDefaultAsync(x => x.Id == req.Id, ct)
             ?? throw new NotFoundException("User", req.Id);
 
+        var wasActive = u.IsActive;
+
         u.FullName = req.FullName.Trim();
         u.Position = req.Position.Trim();
         u.IsActive = req.IsActive;
+
+        if (wasActive != req.IsActive)
+        {
+            if (!req.IsActive)
+            {
+                if (string.IsNullOrWhiteSpace(req.StatusComment) || req.StatusComment.Trim().Length < 3)
+                    throw new ValidationFailedException("Укажите причину блокировки (не короче 3 символов).");
+            }
+
+            var reason = req.IsActive
+                ? (string.IsNullOrWhiteSpace(req.StatusComment) ? "Разблокировка" : req.StatusComment.Trim())
+                : req.StatusComment!.Trim();
+
+            var initiatorId = currentUser.UserId ?? throw new UnauthorizedException();
+
+            db.UserBlockRecords.Add(new UserBlockRecord
+            {
+                UserId = u.Id,
+                InitiatedByUserId = initiatorId,
+                ActionType = req.IsActive ? EmployeeBlockActionType.Unblock : EmployeeBlockActionType.Block,
+                Reason = reason
+            });
+        }
 
         if (u.UserType == UserType.Tansu)
         {
@@ -77,7 +105,45 @@ public sealed class UpdateUserHandler(
 
         await db.SaveChangesAsync(ct);
 
-        return UserMapper.ToDto(u);
+        var blockReason = await UserBlockReasonLookup.GetAsync(db, u.Id, u.IsActive, ct);
+        return UserMapper.ToDto(u, blockReason);
+    }
+}
+
+internal static class UserBlockReasonLookup
+{
+    public static async Task<string?> GetAsync(
+        ITansuDbContext db, Guid userId, bool isActive, CancellationToken ct)
+    {
+        if (isActive) return null;
+
+        var last = await db.UserBlockRecords.AsNoTracking()
+            .Where(r => r.UserId == userId)
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new { r.ActionType, r.Reason })
+            .FirstOrDefaultAsync(ct);
+
+        return last?.ActionType == EmployeeBlockActionType.Block ? last.Reason : null;
+    }
+
+    public static async Task<IReadOnlyDictionary<Guid, string?>> GetManyAsync(
+        ITansuDbContext db, IReadOnlyList<Domain.Entities.User> users, CancellationToken ct)
+    {
+        var inactiveIds = users.Where(u => !u.IsActive).Select(u => u.Id).ToList();
+        if (inactiveIds.Count == 0)
+            return new Dictionary<Guid, string?>();
+
+        var rows = await db.UserBlockRecords.AsNoTracking()
+            .Where(r => inactiveIds.Contains(r.UserId))
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new { r.UserId, r.ActionType, r.Reason })
+            .ToListAsync(ct);
+
+        return rows
+            .GroupBy(r => r.UserId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.First().ActionType == EmployeeBlockActionType.Block ? g.First().Reason : null);
     }
 }
 
@@ -101,7 +167,7 @@ internal static class UserAssignmentSync
             if (!await db.ProjectRefs.AnyAsync(p => p.ProjectOid == oid, ct))
                 throw new NotFoundException("Project", oid);
 
-            db.UserProjectAssignments.Add(new Domain.Entities.UserProjectAssignment
+            db.UserProjectAssignments.Add(new UserProjectAssignment
             {
                 UserId = user.Id,
                 ProjectOid = oid
@@ -127,7 +193,7 @@ internal static class UserAssignmentSync
             if (!await db.Subcontractors.AnyAsync(s => s.Id == sid, ct))
                 throw new NotFoundException("Subcontractor", sid);
 
-            db.UserSubcontractorAssignments.Add(new Domain.Entities.UserSubcontractorAssignment
+            db.UserSubcontractorAssignments.Add(new UserSubcontractorAssignment
             {
                 UserId = user.Id,
                 SubcontractorId = sid

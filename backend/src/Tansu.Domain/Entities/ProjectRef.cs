@@ -4,5 +4,16 @@ public class ProjectRef
 {
     public Guid ProjectOid { get; set; }
     public string? Name { get; set; }
+    public string? CustomerName { get; set; }
+    public string? CustomerPhone { get; set; }
+    public string? CustomerEmail { get; set; }
+    public decimal? BudgetAmount { get; set; }
+    public string BudgetCurrency { get; set; } = "KZT";
+    public Guid? ResponsibleAdminUserId { get; set; }
+    public Guid? ProjectManagerUserId { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    public User? ResponsibleAdmin { get; set; }
+    public User? ProjectManager { get; set; }
+    public ICollection<ProjectDocument> Documents { get; set; } = new List<ProjectDocument>();
 }

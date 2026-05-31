@@ -12,4 +12,7 @@ public sealed record SubcontractorDto(
 
 public sealed record CreateSubcontractorRequest(string Name, string Bin);
 public sealed record UpdateSubcontractorRequest(string Name, string Bin);
-public sealed record BindProjectRequest(Guid ProjectOid, string? ProjectName);
+public sealed record BindProjectRequest(Guid ProjectOid, string? ProjectName, string ActivityType);
+public sealed record BindProjectFromProjectRequest(Guid SubcontractorId, string ActivityType);
+public sealed record UpdateProjectSubcontractorBindingRequest(string ActivityType);
+public sealed record ReportProjectProgressRequest(int CompletionPercent);
