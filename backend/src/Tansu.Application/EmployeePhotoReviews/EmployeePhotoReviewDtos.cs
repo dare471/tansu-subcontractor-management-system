@@ -25,7 +25,11 @@ public sealed record PendingPhotoReviewItemDto(
     string SubcontractorName,
     string? ProjectName,
     string PhotoPath,
-    DateTimeOffset UploadedAt);
+    DateTimeOffset UploadedAt,
+    Guid? UploadedByUserId,
+    string? UploadedByFullName,
+    string? UploadedByEmail,
+    string? UploadedByUserType);
 
 public sealed record ManualPhotoReviewRequest(string? Comment);
 

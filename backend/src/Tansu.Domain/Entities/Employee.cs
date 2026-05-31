@@ -12,10 +12,12 @@ public class Employee
     public string? PhotoPath { get; set; }
     public string? PhotoReviewStatus { get; set; }
     public string? PhotoReviewReason { get; set; }
+    public Guid? PhotoUploadedByUserId { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public Subcontractor? Subcontractor { get; set; }
     public ProjectRef? Project { get; set; }
+    public User? PhotoUploadedBy { get; set; }
     public ICollection<ApprovalSheetEntry> ApprovalSheet { get; set; } = new List<ApprovalSheetEntry>();
 }

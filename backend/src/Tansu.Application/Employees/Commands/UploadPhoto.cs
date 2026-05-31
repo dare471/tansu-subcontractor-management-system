@@ -46,6 +46,7 @@ public sealed class UploadPhotoHandler(
         e.PhotoPath = relative;
         e.PhotoReviewStatus = null;
         e.PhotoReviewReason = null;
+        e.PhotoUploadedByUserId = currentUser.UserId;
         e.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
 

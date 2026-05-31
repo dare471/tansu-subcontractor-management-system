@@ -78,18 +78,18 @@ def _is_jpeg(data: bytes) -> bool:
 def _background_is_neutral(bgr: np.ndarray) -> tuple[bool, str]:
     h, w = bgr.shape[:2]
     margin = max(4, min(h, w) // 20)
-    border = np.concatenate(
+    l_channel = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[:, :, 0]
+    border_l = np.concatenate(
         [
-            bgr[:margin, :].reshape(-1, 3),
-            bgr[-margin:, :].reshape(-1, 3),
-            bgr[:, :margin].reshape(-1, 3),
-            bgr[:, -margin:].reshape(-1, 3),
+            l_channel[:margin, :].ravel(),
+            l_channel[-margin:, :].ravel(),
+            l_channel[:, :margin].ravel(),
+            l_channel[:, -margin:].ravel(),
         ],
-        axis=0,
     )
-    std = float(np.std(border))
+    std = float(np.std(border_l))
     if std > MAX_BACKGROUND_STD:
-        return False, f"Фон не однотонный (вариация {std:.0f}). Используйте нейтральный фон."
+        return False, f"Фон не однотонный (вариация яркости {std:.0f}). Используйте нейтральный фон."
     return True, "Фон нейтральный."
 
 

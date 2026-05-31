@@ -8,6 +8,10 @@ export type PendingPhotoReview = {
   projectName: string | null;
   photoPath: string;
   uploadedAt: string;
+  uploadedByUserId: string | null;
+  uploadedByFullName: string | null;
+  uploadedByEmail: string | null;
+  uploadedByUserType: 'TANSU' | 'Subcontractor' | 'Employee' | null;
 };
 
 export type EmployeePhotoReview = {

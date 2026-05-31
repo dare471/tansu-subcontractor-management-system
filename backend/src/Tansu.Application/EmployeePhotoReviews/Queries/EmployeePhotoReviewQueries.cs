@@ -83,6 +83,7 @@ public sealed class ListPendingPhotoReviewsHandler(
         return await q
             .Include(e => e.Subcontractor)
             .Include(e => e.Project)
+            .Include(e => e.PhotoUploadedBy)
             .OrderBy(e => e.UpdatedAt)
             .Select(e => new PendingPhotoReviewItemDto(
                 e.Id,
@@ -91,7 +92,11 @@ public sealed class ListPendingPhotoReviewsHandler(
                 e.Subcontractor!.Name,
                 e.Project!.Name,
                 e.PhotoPath!,
-                e.UpdatedAt))
+                e.UpdatedAt,
+                e.PhotoUploadedByUserId,
+                e.PhotoUploadedBy != null ? e.PhotoUploadedBy.FullName : null,
+                e.PhotoUploadedBy != null ? e.PhotoUploadedBy.Email : null,
+                e.PhotoUploadedBy != null ? e.PhotoUploadedBy.UserType : null))
             .ToListAsync(ct);
     }
 }

@@ -20,6 +20,7 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         e.Property(x => x.PhotoPath).HasColumnName("photo_path").HasMaxLength(1024);
         e.Property(x => x.PhotoReviewStatus).HasColumnName("photo_review_status").HasMaxLength(16);
         e.Property(x => x.PhotoReviewReason).HasColumnName("photo_review_reason").HasMaxLength(2000);
+        e.Property(x => x.PhotoUploadedByUserId).HasColumnName("photo_uploaded_by_user_id");
         e.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         e.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");
 
@@ -35,5 +36,10 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
             .WithMany()
             .HasForeignKey(x => x.ProjectOid)
             .OnDelete(DeleteBehavior.Restrict);
+
+        e.HasOne(x => x.PhotoUploadedBy)
+            .WithMany()
+            .HasForeignKey(x => x.PhotoUploadedByUserId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

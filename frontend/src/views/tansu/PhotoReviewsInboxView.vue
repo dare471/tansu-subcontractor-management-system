@@ -57,7 +57,22 @@ async function confirm() {
   finally { submitting.value = false; }
 }
 
-const TABLE_SCROLL_X = 1100;
+function uploaderLabel(r: PendingPhotoReview) {
+  if (!r.uploadedByFullName && !r.uploadedByEmail) return '—';
+  const name = r.uploadedByFullName ?? r.uploadedByEmail ?? '—';
+  const typeLabel = r.uploadedByUserType === 'Subcontractor'
+    ? 'админ субподрядчика'
+    : r.uploadedByUserType === 'Employee'
+      ? 'личный кабинет'
+      : r.uploadedByUserType === 'TANSU'
+        ? 'ТАНСУ'
+        : null;
+  if (r.uploadedByFullName && r.uploadedByEmail && !r.uploadedByEmail.endsWith('@portal.tansu.local'))
+    return typeLabel ? `${name} · ${typeLabel}` : `${name} (${r.uploadedByEmail})`;
+  return typeLabel ? `${name} · ${typeLabel}` : name;
+}
+
+const TABLE_SCROLL_X = 1320;
 
 const columns: DataTableColumns<PendingPhotoReview> = [
   {
@@ -85,6 +100,11 @@ const columns: DataTableColumns<PendingPhotoReview> = [
     title: 'Проект', key: 'projectName', width: 200,
     ellipsis: { tooltip: true },
     render: (r) => r.projectName ?? '—'
+  },
+  {
+    title: 'Загрузил', key: 'uploadedBy', width: 240,
+    render: (r) => uploaderLabel(r),
+    ellipsis: { tooltip: true }
   },
   {
     title: 'Загружено', key: 'uploadedAt', width: 160,

@@ -270,6 +270,8 @@ CREATE INDEX IF NOT EXISTS ix_employee_block_records_employee
 
 ALTER TABLE subcontract.employees ADD COLUMN IF NOT EXISTS photo_review_status varchar(16);
 ALTER TABLE subcontract.employees ADD COLUMN IF NOT EXISTS photo_review_reason varchar(2000);
+ALTER TABLE subcontract.employees ADD COLUMN IF NOT EXISTS photo_uploaded_by_user_id uuid
+    REFERENCES subcontract.users(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS subcontract.employee_photo_reviews (
     id                   uuid PRIMARY KEY,

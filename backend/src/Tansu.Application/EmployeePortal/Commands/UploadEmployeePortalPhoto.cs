@@ -43,6 +43,7 @@ public sealed class UploadEmployeePortalPhotoHandler(
         employee.PhotoPath = relative;
         employee.PhotoReviewStatus = null;
         employee.PhotoReviewReason = null;
+        employee.PhotoUploadedByUserId = currentUser.UserId;
         employee.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
 
