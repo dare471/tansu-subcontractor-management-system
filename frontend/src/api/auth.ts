@@ -11,6 +11,20 @@ export type LoginResponse = {
   employeeId?: string | null;
 };
 
+export type TansuPermissions = {
+  canRegisterSubcontractors: boolean;
+  canManageApprovalMatrix: boolean;
+  canApproveEmployees: boolean;
+  canBlockEmployees: boolean;
+  canViewVisitJournal: boolean;
+  canManageTansuUsers: boolean;
+  canManageSubordinates: boolean;
+  canViewEmployees: boolean;
+  canUploadDocuments: boolean;
+  isReadOnlyMonitoring: boolean;
+  isGlobalAdmin: boolean;
+};
+
 export type MeResponse = {
   id: string;
   fullName: string;
@@ -23,6 +37,9 @@ export type MeResponse = {
   approverRole: string | null;
   mustChangePassword: boolean;
   employeeId?: string | null;
+  isSuperUser: boolean;
+  tansuRole: string | null;
+  permissions: TansuPermissions | null;
 };
 
 export type MyProject = { projectOid: string; name: string | null; hasApprovalMatrix: boolean };

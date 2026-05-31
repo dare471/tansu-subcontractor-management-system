@@ -2,23 +2,23 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
-using Tansu.Application.EmployeePortal;
-using Tansu.Application.EmployeePortal.Queries;
+using Tansu.Application.EmployeePhotoReviews;
+using Tansu.Application.EmployeePhotoReviews.Commands;
+using Tansu.Application.Employees.Commands;
 using Tansu.Domain.Enums;
 
 namespace Tansu.Application.EmployeePortal.Commands;
 
 public sealed record UploadEmployeePortalPhotoCommand(string FileName, Stream Content)
-    : IRequest<EmployeePortalPhotoUploadResult>;
+    : IRequest<UploadPhotoReviewResultDto>;
 
 public sealed class UploadEmployeePortalPhotoHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
     IPhotoStorage storage,
-    IFacePhotoValidator faceValidator)
-    : IRequestHandler<UploadEmployeePortalPhotoCommand, EmployeePortalPhotoUploadResult>
+    IMediator mediator) : IRequestHandler<UploadEmployeePortalPhotoCommand, UploadPhotoReviewResultDto>
 {
-    public async Task<EmployeePortalPhotoUploadResult> Handle(
+    public async Task<UploadPhotoReviewResultDto> Handle(
         UploadEmployeePortalPhotoCommand req,
         CancellationToken ct)
     {
@@ -29,25 +29,31 @@ public sealed class UploadEmployeePortalPhotoHandler(
             .FirstOrDefaultAsync(e => e.Id == currentUser.EmployeeId, ct)
             ?? throw new NotFoundException("Employee", currentUser.EmployeeId.Value);
 
+        UploadPhotoHandler.EnsureJpeg(req.FileName);
+
         await using var buffer = new MemoryStream();
         await req.Content.CopyToAsync(buffer, ct);
         if (buffer.Length == 0)
             throw new ValidationFailedException("Файл пустой.");
-
-        buffer.Position = 0;
-        var faceCheck = await faceValidator.ValidateHasFaceAsync(buffer, ct);
-        if (!faceCheck.HasFace)
-            throw new ValidationFailedException(faceCheck.Message);
+        if (buffer.Length > 200 * 1024)
+            throw new ValidationFailedException("Файл больше 200 КБ. Требование Hikvision: 40–200 КБ.");
 
         buffer.Position = 0;
         var relative = await storage.SaveAsync(employee.Id, req.FileName, buffer, ct);
         employee.PhotoPath = relative;
+        employee.PhotoReviewStatus = null;
+        employee.PhotoReviewReason = null;
         employee.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(ct);
 
-        return new EmployeePortalPhotoUploadResult(
+        var review = await mediator.Send(new RunEmployeePhotoAutoReviewCommand(employee.Id), ct);
+        var updated = await db.Employees.AsNoTracking().FirstAsync(e => e.Id == employee.Id, ct);
+
+        return new UploadPhotoReviewResultDto(
             relative,
-            "Фото загружено. Его можно использовать для Face ID на проходной.");
+            updated.PhotoReviewStatus ?? EmployeePhotoReviewStatus.Rejected,
+            UploadPhotoHandler.BuildUploadMessage(updated),
+            review);
     }
 }
 
@@ -60,7 +66,7 @@ public sealed class GetEmployeePortalPhotoHandler(
 {
     public async Task<Stream?> Handle(GetEmployeePortalPhotoQuery req, CancellationToken ct)
     {
-        var employee = await GetEmployeePortalDashboardHandler.LoadCurrentEmployeeAsync(db, currentUser, ct);
+        var employee = await Queries.GetEmployeePortalDashboardHandler.LoadCurrentEmployeeAsync(db, currentUser, ct);
         if (string.IsNullOrEmpty(employee.PhotoPath))
             return null;
 

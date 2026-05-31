@@ -1,7 +1,9 @@
 using MassTransit;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Application.EmployeePhotoReviews.Commands;
 using Tansu.Contracts.Messages;
 using Tansu.Domain.Entities;
 using Tansu.Domain.Enums;
@@ -63,6 +65,58 @@ internal static class EmployeeSubmitCore
         {
             throw new ConflictException("employee_in_draft_batch",
                 $"Сотрудник «{employee.FullName}» уже включён в черновик пакета.");
+        }
+
+        var isBlocked = await EmployeeDocuments.EmployeeBlockHelper.IsBlockedAsync(db, employee.Id, ct);
+        if (!isBlocked)
+        {
+            var sheets = await db.ApprovalSheet.AsNoTracking()
+                .Where(a => a.EmployeeId == employee.Id)
+                .ToListAsync(ct);
+            var status = Employees.EmployeeStatusResolver.ResolveFromSheets(sheets);
+            if (status == ApprovalStatus.Approved)
+            {
+                throw new ConflictException("employee_already_approved",
+                    $"Сотрудник «{employee.FullName}» уже согласован. Повторная отправка возможна после блокировки или отклонения.");
+            }
+        }
+    }
+
+    internal static async Task EnsurePhotoApprovedAsync(
+        ITansuDbContext db,
+        Employee employee,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(employee.PhotoPath))
+        {
+            throw new ValidationFailedException(
+                $"У сотрудника «{employee.FullName}» не загружено фото. Загрузите фото и дождитесь проверки.");
+        }
+
+        if (employee.PhotoReviewStatus is null)
+        {
+            await mediator.Send(new RunEmployeePhotoAutoReviewCommand(employee.Id), ct);
+            var fresh = await db.Employees.AsNoTracking()
+                .FirstAsync(e => e.Id == employee.Id, ct);
+            employee.PhotoReviewStatus = fresh.PhotoReviewStatus;
+            employee.PhotoReviewReason = fresh.PhotoReviewReason;
+        }
+
+        switch (employee.PhotoReviewStatus)
+        {
+            case EmployeePhotoReviewStatus.Approved:
+                return;
+            case EmployeePhotoReviewStatus.Rejected:
+                throw new ValidationFailedException(
+                    employee.PhotoReviewReason ??
+                    $"Фото сотрудника «{employee.FullName}» не прошло проверку. Загрузите новое фото.");
+            case EmployeePhotoReviewStatus.Pending:
+                throw new ValidationFailedException(
+                    $"Фото сотрудника «{employee.FullName}» ожидает проверки ответственным сотрудником ТАНСУ.");
+            default:
+                throw new ValidationFailedException(
+                    $"Фото сотрудника «{employee.FullName}» не прошло проверку.");
         }
     }
 

@@ -27,6 +27,11 @@ public class TansuDbContext : DbContext, ITansuDbContext
     public DbSet<EmployeeSafetyQuizCompletion> EmployeeSafetyQuizCompletions =>
         Set<EmployeeSafetyQuizCompletion>();
     public DbSet<EmployeePpeIssuance> EmployeePpeIssuances => Set<EmployeePpeIssuance>();
+    public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
+    public DbSet<EmployeeBlockRecord> EmployeeBlockRecords => Set<EmployeeBlockRecord>();
+    public DbSet<UserProjectAssignment> UserProjectAssignments => Set<UserProjectAssignment>();
+    public DbSet<UserSubcontractorAssignment> UserSubcontractorAssignments => Set<UserSubcontractorAssignment>();
+    public DbSet<EmployeePhotoReview> EmployeePhotoReviews => Set<EmployeePhotoReview>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {

@@ -1,7 +1,8 @@
-using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using FluentValidation;
 using MediatR;
-using Microsoft.Extensions.DependencyInjection;
+using Tansu.Application.Auth;
+using Tansu.Application.Common.Interfaces;
 using Tansu.Application.Common.Behaviors;
 
 namespace Tansu.Application;
@@ -19,6 +20,7 @@ public static class ApplicationServiceCollectionExtensions
         });
 
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
+        services.AddScoped<ITansuAccessService, TansuAccessService>();
 
         return services;
     }

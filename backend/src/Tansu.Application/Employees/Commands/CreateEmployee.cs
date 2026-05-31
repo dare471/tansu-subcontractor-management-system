@@ -60,6 +60,8 @@ public sealed class CreateEmployeeHandler(ITansuDbContext db)
             e.Id, e.SubcontractorId, sub.Name,
             e.ProjectOid, project?.Name,
             e.FullName, e.Position, e.Phone, e.Iin, e.PhotoPath,
+            e.PhotoReviewStatus, e.PhotoReviewReason,
+            false, null,
             null, null, null, null, null,
             e.CreatedAt, e.UpdatedAt);
     }

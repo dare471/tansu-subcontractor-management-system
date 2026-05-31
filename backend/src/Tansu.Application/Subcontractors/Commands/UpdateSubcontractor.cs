@@ -2,6 +2,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Tansu.Application.Common.Exceptions;
+using Tansu.Application.Auth;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Application.Employees;
 using Tansu.Domain.Entities;
@@ -20,11 +21,18 @@ public sealed class UpdateSubcontractorValidator : AbstractValidator<UpdateSubco
     }
 }
 
-public sealed class UpdateSubcontractorHandler(ITansuDbContext db)
-    : IRequestHandler<UpdateSubcontractorCommand, SubcontractorDto>
+public sealed class UpdateSubcontractorHandler(
+    ITansuDbContext db,
+    ITansuAccessService accessService) : IRequestHandler<UpdateSubcontractorCommand, SubcontractorDto>
 {
     public async Task<SubcontractorDto> Handle(UpdateSubcontractorCommand req, CancellationToken ct)
     {
+        await accessService.EnsureSubcontractorVisibleAsync(req.Id, ct);
+        var access = await accessService.GetAccessAsync(ct);
+        accessService.EnsurePermission(
+            access, p => p.CanRegisterSubcontractors || p.IsGlobalAdmin,
+            "Нет права редактировать субподрядчиков.");
+
         var entity = await db.Subcontractors
             .Include(x => x.Projects)
             .FirstOrDefaultAsync(x => x.Id == req.Id, ct)
@@ -73,6 +81,6 @@ public sealed class UpdateSubcontractorHandler(ITansuDbContext db)
 
         return new SubcontractorDto(
             entity.Id, entity.Name, entity.Bin,
-            entity.Projects.Count, approved, notApproved, entity.CreatedAt);
+            entity.Projects.Count, approved, notApproved, entity.IsActive, entity.CreatedAt);
     }
 }

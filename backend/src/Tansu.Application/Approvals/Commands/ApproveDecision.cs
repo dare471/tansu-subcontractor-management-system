@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Tansu.Application.AccessPasses.Commands;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Application.EmployeeDocuments.Commands;
 using Tansu.Contracts.Messages;
 using Tansu.Domain.Enums;
 
@@ -69,6 +70,8 @@ public sealed class ApproveHandler(
                 initiator.Id, initiator.Email,
                 DateTimeOffset.UtcNow), ct);
 
+            await mediator.Send(
+                new UnblockEmployeeAfterReapprovalCommand(employee.Id, initiator.Id), ct);
             await mediator.Send(new IssueEmployeeAccessPassCommand(employee.Id), ct);
             await mediator.Send(new EmployeePortal.Commands.ProvisionEmployeePortalCommand(employee.Id), ct);
         }

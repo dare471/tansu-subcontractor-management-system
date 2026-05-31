@@ -1,0 +1,13 @@
+@model dynamic
+@{
+    Layout = "_layout";
+    ViewBag.Title = "Истекает документ";
+}
+
+<h2>Срок действия документа истекает</h2>
+<p>
+    У сотрудника <strong>@Model.EmployeeFullName</strong> (субподрядчик «@Model.SubcontractorName»)
+    документ «@Model.DocumentName» (@Model.DocumentType) истекает <strong>@Model.ExpiresAt</strong>.
+</p>
+<p>Загрузите актуальную версию документа в карточке сотрудника.</p>
+<p><a href="@Model.CardUrl">Открыть карточку сотрудника</a></p>

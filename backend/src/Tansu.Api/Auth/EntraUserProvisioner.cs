@@ -62,6 +62,11 @@ public sealed class EntraUserProvisioner(TansuDbContext db, ILogger<EntraUserPro
             ci.AddClaim(new Claim("sub", user.Id.ToString()));
             ci.AddClaim(new Claim("user_type", UserType.Tansu));
             ci.AddClaim(new Claim("email", user.Email));
+            ci.AddClaim(new Claim("is_superuser", user.IsSuperUser ? "true" : "false"));
+            if (!string.IsNullOrWhiteSpace(user.TansuRole))
+                ci.AddClaim(new Claim("tansu_role", user.TansuRole));
+            if (!string.IsNullOrWhiteSpace(user.ApproverRole))
+                ci.AddClaim(new Claim("approver_role", user.ApproverRole));
         }
     }
 }

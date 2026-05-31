@@ -72,6 +72,7 @@ services:
       AccessPass__VerifyWebBaseUrl: ${AccessPass__VerifyWebBaseUrl:-https://localhost:${VERIFY_WEB_PORT:-5174}}
       AccessPass__VerifyServiceKey: ${VERIFY_SERVICE_KEY:-dev-verify-service-key-change-me}
       FaceVerify__BaseUrl: ${FACE_VERIFY_BASE_URL:-http://face-verify:8092}
+      EmployeePhotoReview__RequireManualApproval: ${EMPLOYEE_PHOTO_REQUIRE_MANUAL:-true}
       EmployeePortal__CredentialsLogPath: ${EMPLOYEE_PORTAL_CREDENTIALS_PATH:-/app/data/employee-portal-credentials.log}
     ports:
       - "${API_PORT:-8080}:8080"
@@ -121,6 +122,9 @@ services:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
     ports:
       - "${WEB_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     command: npm run dev -- --host 0.0.0.0
 
   verify-api:

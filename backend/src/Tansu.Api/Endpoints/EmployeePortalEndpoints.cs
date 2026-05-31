@@ -4,6 +4,7 @@ using Tansu.Api.Auth;
 using Tansu.Application.EmployeePortal;
 using Tansu.Application.EmployeePortal.Commands;
 using Tansu.Application.EmployeePortal.Queries;
+using Tansu.Application.EmployeeDocuments.Queries;
 using Tansu.Application.PpeIssuance.Queries;
 
 namespace Tansu.Api.Endpoints;
@@ -46,6 +47,24 @@ public static class EmployeePortalEndpoints
                 Results.Ok(await mediator.Send(new GetEmployeePortalPpeQuery(), ct)))
         .WithSummary("Выданные СИЗ (каска, униформа).");
 
+        portal.MapGet("/documents", async (IMediator mediator, CancellationToken ct) =>
+                Results.Ok(await mediator.Send(new GetEmployeePortalDocumentsQuery(), ct)))
+        .WithSummary("Документы сотрудника (read-only).");
+
+        portal.MapGet("/documents/{documentId:guid}/file", async (
+            Guid documentId, IMediator mediator, CancellationToken ct) =>
+        {
+            var file = await mediator.Send(new GetEmployeePortalDocumentFileQuery(documentId), ct);
+            return file is null
+                ? Results.NotFound()
+                : Results.File(file.Value.Stream, file.Value.ContentType, file.Value.FileName);
+        })
+        .WithSummary("Скачать свой документ.");
+
+        portal.MapGet("/blocks", async (IMediator mediator, CancellationToken ct) =>
+                Results.Ok(await mediator.Send(new GetEmployeePortalBlockStatusQuery(), ct)))
+        .WithSummary("Статус блокировки (read-only).");
+
         portal.MapPost("/photo", async (HttpRequest http, IMediator mediator, CancellationToken ct) =>
         {
             if (!http.HasFormContentType)
@@ -55,8 +74,8 @@ public static class EmployeePortalEndpoints
             var file = form.Files["file"] ?? form.Files.FirstOrDefault();
             if (file is null || file.Length == 0)
                 return Results.BadRequest(new { code = "bad_request", detail = "Файл не передан." });
-            if (file.Length > 5 * 1024 * 1024)
-                return Results.BadRequest(new { code = "file_too_large", detail = "Файл больше 5 МБ." });
+            if (file.Length > 200 * 1024)
+                return Results.BadRequest(new { code = "file_too_large", detail = "Файл больше 200 КБ (требование Hikvision)." });
 
             await using var stream = file.OpenReadStream();
             var result = await mediator.Send(new UploadEmployeePortalPhotoCommand(file.FileName, stream), ct);

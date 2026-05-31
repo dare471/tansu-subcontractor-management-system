@@ -4,34 +4,96 @@ import { useRouter, useRoute, RouterView } from 'vue-router';
 import { NIcon, NAvatar, NDropdown } from 'naive-ui';
 import {
   HomeOutline, PeopleOutline, BusinessOutline, PersonCircleOutline,
-  GitNetworkOutline, IdCardOutline, MailUnreadOutline,
+  GitNetworkOutline, IdCardOutline, MailUnreadOutline, TimeOutline,
   LogOutOutline, ChevronDownOutline, SettingsOutline,
   DocumentTextOutline, ClipboardOutline
 } from '@vicons/ionicons5';
 import { useAuthStore } from '@/stores/auth';
+import type { TansuPermissions } from '@/api/auth';
 
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 
-type NavItem = { name: string; label: string; icon: any; roles?: ('TANSU' | 'Subcontractor')[] };
+type NavItem = {
+  name: string;
+  label: string;
+  icon: any;
+  roles?: ('TANSU' | 'Subcontractor')[];
+  permission?: keyof TansuPermissions;
+};
 
 const allItems: NavItem[] = [
   { name: 'home', label: 'Главная', icon: HomeOutline },
-  { name: 'subcontractors', label: 'Субподрядчики', icon: PeopleOutline, roles: ['TANSU'] },
+  {
+    name: 'subcontractors',
+    label: 'Субподрядчики',
+    icon: PeopleOutline,
+    roles: ['TANSU'],
+    permission: 'canViewEmployees'
+  },
   { name: 'projects', label: 'Проекты', icon: BusinessOutline, roles: ['TANSU'] },
-  { name: 'users', label: 'Пользователи', icon: PersonCircleOutline, roles: ['TANSU'] },
-  { name: 'matrix', label: 'Матрица согласования', icon: GitNetworkOutline, roles: ['TANSU'] },
-  { name: 'document-matrix', label: 'Матрица заявок', icon: ClipboardOutline, roles: ['TANSU'] },
+  {
+    name: 'users',
+    label: 'Пользователи',
+    icon: PersonCircleOutline,
+    roles: ['TANSU'],
+    permission: 'canManageTansuUsers'
+  },
+  {
+    name: 'tansu-employees',
+    label: 'Сотрудники СП',
+    icon: IdCardOutline,
+    roles: ['TANSU'],
+    permission: 'canViewEmployees'
+  },
+  {
+    name: 'matrix',
+    label: 'Матрица согласования',
+    icon: GitNetworkOutline,
+    roles: ['TANSU'],
+    permission: 'canManageApprovalMatrix'
+  },
+  {
+    name: 'document-matrix',
+    label: 'Матрица заявок',
+    icon: ClipboardOutline,
+    roles: ['TANSU'],
+    permission: 'canApproveEmployees'
+  },
+  {
+    name: 'site-visit-journal',
+    label: 'Журнал посещений',
+    icon: TimeOutline,
+    roles: ['TANSU'],
+    permission: 'canViewVisitJournal'
+  },
   { name: 'employees', label: 'Сотрудники', icon: IdCardOutline, roles: ['Subcontractor'] },
   { name: 'employee-batches', label: 'Пакеты согласования', icon: ClipboardOutline, roles: ['Subcontractor'] },
   { name: 'document-requests', label: 'Заявки', icon: DocumentTextOutline, roles: ['Subcontractor'] },
-  { name: 'approvals-inbox', label: 'Согласование сотрудников', icon: MailUnreadOutline, roles: ['TANSU'] },
-  { name: 'document-requests-inbox', label: 'Согласование заявок', icon: DocumentTextOutline, roles: ['TANSU'] }
+  {
+    name: 'approvals-inbox',
+    label: 'Согласование сотрудников',
+    icon: MailUnreadOutline,
+    roles: ['TANSU'],
+    permission: 'canApproveEmployees'
+  },
+  { name: 'photo-reviews-inbox', label: 'Проверка фото', icon: IdCardOutline, roles: ['TANSU'] },
+  {
+    name: 'document-requests-inbox',
+    label: 'Согласование заявок',
+    icon: DocumentTextOutline,
+    roles: ['TANSU'],
+    permission: 'canApproveEmployees'
+  }
 ];
 
 const items = computed(() =>
-  allItems.filter((i) => !i.roles || (auth.user && i.roles.includes(auth.user.userType)))
+  allItems.filter((i) => {
+    if (i.roles && (!auth.user || !i.roles.includes(auth.user.userType))) return false;
+    if (i.permission && !auth.permissions[i.permission] && !auth.permissions.isGlobalAdmin) return false;
+    return true;
+  })
 );
 
 const activeName = computed(() => route.name?.toString() ?? '');
@@ -60,9 +122,22 @@ const userInitials = computed(() => {
   return n.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') || '?';
 });
 
-const userRoleLabel = computed(() =>
-  auth.user?.userType === 'TANSU' ? 'Сотрудник ТАНСУ' : 'Субподрядчик'
-);
+const roleLabels: Record<string, string> = {
+  oid_manager: 'ОИД менеджер',
+  oid_director: 'ОИД начальник',
+  sb_project: 'СБ на проекте',
+  sb_chief: 'СБ начальник',
+  safety_project: 'БиОТ/ТБ на проекте',
+  safety_chief: 'БиОТ начальник',
+  project_manager: 'Руководитель проекта',
+  global_admin: 'Глобальный администратор'
+};
+
+const userRoleLabel = computed(() => {
+  if (auth.user?.userType === 'Subcontractor') return 'Субподрядчик';
+  if (auth.user?.tansuRole) return roleLabels[auth.user.tansuRole] ?? auth.user.tansuRole;
+  return 'Сотрудник ТАНСУ';
+});
 </script>
 
 <template>

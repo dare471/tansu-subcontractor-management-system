@@ -28,6 +28,8 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<DocumentRequestSubmittedConsumer>();
     x.AddConsumer<DocumentRequestNextApproverConsumer>();
     x.AddConsumer<EmployeeBatchSubmittedConsumer>();
+    x.AddConsumer<EmployeeBlockedConsumer>();
+    x.AddConsumer<EmployeeDocumentExpiringConsumer>();
 
     x.UsingRabbitMq((ctx, cfg) =>
     {

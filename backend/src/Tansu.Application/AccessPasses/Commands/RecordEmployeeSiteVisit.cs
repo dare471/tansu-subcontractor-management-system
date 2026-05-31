@@ -1,7 +1,10 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Application.EmployeeDocuments;
 using Tansu.Domain.Entities;
+
+using Tansu.Domain.Enums;
 
 namespace Tansu.Application.AccessPasses.Commands;
 
@@ -25,13 +28,17 @@ public sealed class RecordEmployeeSiteVisitHandler(ITansuDbContext db)
         if (pass?.Employee is not { } employee)
             return null;
 
+        if (await EmployeeBlockHelper.IsBlockedAsync(db, employee.Id, ct))
+            return null;
+
         var visit = new EmployeeSiteVisit
         {
             EmployeeId = employee.Id,
             AccessPassId = pass.Id,
             CheckedInAt = DateTimeOffset.UtcNow,
             FaceConfidence = req.FaceConfidence,
-            VerificationMethod = "face_id"
+            VerificationMethod = "face_id",
+            DataSource = SiteVisitDataSource.FaceId
         };
 
         db.EmployeeSiteVisits.Add(visit);

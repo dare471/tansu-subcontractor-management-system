@@ -201,6 +201,9 @@ CREATE TABLE IF NOT EXISTS subcontract.employee_site_visits (
 CREATE INDEX IF NOT EXISTS ix_employee_site_visits_employee
     ON subcontract.employee_site_visits (employee_id, checked_in_at DESC);
 
+CREATE INDEX IF NOT EXISTS ix_employee_site_visits_checked_in
+    ON subcontract.employee_site_visits (checked_in_at DESC);
+
 ALTER TABLE subcontract.users ADD COLUMN IF NOT EXISTS employee_id uuid
     REFERENCES subcontract.employees(id) ON DELETE CASCADE;
 
@@ -235,3 +238,93 @@ CREATE TABLE IF NOT EXISTS subcontract.employee_ppe_issuances (
 
 CREATE INDEX IF NOT EXISTS ix_employee_ppe_employee
     ON subcontract.employee_ppe_issuances (employee_id, item_type, issued_at DESC);
+
+CREATE TABLE IF NOT EXISTS subcontract.employee_documents (
+    id                   uuid PRIMARY KEY,
+    employee_id          uuid NOT NULL REFERENCES subcontract.employees(id) ON DELETE CASCADE,
+    name                 varchar(500) NOT NULL,
+    document_type        varchar(32) NOT NULL,
+    file_path            varchar(1024) NOT NULL,
+    uploaded_at          timestamptz NOT NULL DEFAULT now(),
+    expires_at           timestamptz,
+    uploaded_by_user_id  uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE RESTRICT,
+    CONSTRAINT ck_employee_document_type CHECK (
+        document_type IN ('id_card', 'certificate', 'reference', 'medical', 'permit', 'other'))
+);
+
+CREATE INDEX IF NOT EXISTS ix_employee_documents_employee
+    ON subcontract.employee_documents (employee_id, uploaded_at DESC);
+
+CREATE TABLE IF NOT EXISTS subcontract.employee_block_records (
+    id                    uuid PRIMARY KEY,
+    employee_id           uuid NOT NULL REFERENCES subcontract.employees(id) ON DELETE CASCADE,
+    initiated_by_user_id  uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE RESTRICT,
+    action_type           varchar(16) NOT NULL,
+    reason                varchar(1000) NOT NULL,
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT ck_employee_block_action_type CHECK (action_type IN ('block', 'unblock'))
+);
+
+CREATE INDEX IF NOT EXISTS ix_employee_block_records_employee
+    ON subcontract.employee_block_records (employee_id, created_at DESC);
+
+ALTER TABLE subcontract.employees ADD COLUMN IF NOT EXISTS photo_review_status varchar(16);
+ALTER TABLE subcontract.employees ADD COLUMN IF NOT EXISTS photo_review_reason varchar(2000);
+
+CREATE TABLE IF NOT EXISTS subcontract.employee_photo_reviews (
+    id                   uuid PRIMARY KEY,
+    employee_id          uuid NOT NULL REFERENCES subcontract.employees(id) ON DELETE CASCADE,
+    photo_path           varchar(1024) NOT NULL,
+    review_type          varchar(16) NOT NULL,
+    result               varchar(16) NOT NULL,
+    reason               varchar(2000),
+    details_json         text,
+    reviewed_by_user_id  uuid REFERENCES subcontract.users(id) ON DELETE SET NULL,
+    created_at           timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT ck_employee_photo_review_type CHECK (review_type IN ('auto', 'manual')),
+    CONSTRAINT ck_employee_photo_review_result CHECK (result IN ('passed', 'failed', 'pending'))
+);
+
+CREATE INDEX IF NOT EXISTS ix_employee_photo_reviews_employee
+    ON subcontract.employee_photo_reviews (employee_id, created_at DESC);
+
+ALTER TABLE subcontract.users ADD COLUMN IF NOT EXISTS is_superuser boolean NOT NULL DEFAULT false;
+
+ALTER TABLE subcontract.employee_block_records ADD COLUMN IF NOT EXISTS initiator_role varchar(32);
+
+ALTER TABLE subcontract.employee_documents ADD COLUMN IF NOT EXISTS supersedes_document_id uuid
+    REFERENCES subcontract.employee_documents(id) ON DELETE SET NULL;
+ALTER TABLE subcontract.employee_documents ADD COLUMN IF NOT EXISTS content_type varchar(64);
+ALTER TABLE subcontract.employee_documents ADD COLUMN IF NOT EXISTS expiry_notified_at timestamptz;
+
+UPDATE subcontract.employee_documents SET document_type = 'safety_briefing' WHERE document_type = 'reference';
+
+ALTER TABLE subcontract.employee_documents DROP CONSTRAINT IF EXISTS ck_employee_document_type;
+ALTER TABLE subcontract.employee_documents ADD CONSTRAINT ck_employee_document_type CHECK (
+    document_type IN ('id_card', 'certificate', 'safety_briefing', 'medical', 'permit', 'other'));
+
+ALTER TABLE subcontract.subcontractors ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
+ALTER TABLE subcontract.subcontractors ADD COLUMN IF NOT EXISTS registered_by_user_id uuid
+    REFERENCES subcontract.users(id) ON DELETE SET NULL;
+
+ALTER TABLE subcontract.users ADD COLUMN IF NOT EXISTS tansu_role varchar(32);
+ALTER TABLE subcontract.users ADD COLUMN IF NOT EXISTS manager_user_id uuid
+    REFERENCES subcontract.users(id) ON DELETE SET NULL;
+
+ALTER TABLE subcontract.employee_block_records ADD COLUMN IF NOT EXISTS status varchar(16) NOT NULL DEFAULT 'applied';
+
+CREATE TABLE IF NOT EXISTS subcontract.user_project_assignments (
+    user_id     uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE CASCADE,
+    project_oid uuid NOT NULL REFERENCES subcontract.project_refs(project_oid) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, project_oid)
+);
+
+CREATE TABLE IF NOT EXISTS subcontract.user_subcontractor_assignments (
+    user_id          uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE CASCADE,
+    subcontractor_id uuid NOT NULL REFERENCES subcontract.subcontractors(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, subcontractor_id)
+);
+
+ALTER TABLE subcontract.employee_site_visits ADD COLUMN IF NOT EXISTS checked_out_at timestamptz;
+ALTER TABLE subcontract.employee_site_visits ADD COLUMN IF NOT EXISTS terminal_location varchar(500);
+ALTER TABLE subcontract.employee_site_visits ADD COLUMN IF NOT EXISTS data_source varchar(32) NOT NULL DEFAULT 'face_id';

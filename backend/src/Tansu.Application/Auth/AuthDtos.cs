@@ -25,4 +25,7 @@ public sealed record MeResponse(
     string? SubcontractorBin,
     string? ApproverRole,
     bool MustChangePassword,
-    Guid? EmployeeId = null);
+    Guid? EmployeeId = null,
+    bool IsSuperUser = false,
+    string? TansuRole = null,
+    TansuPermissionsDto? Permissions = null);

@@ -30,7 +30,7 @@ public sealed class FileEmployeePortalCredentialWriter(
                 $"{DateTimeOffset.UtcNow:O}\t{employeeId}\t{fullName}\tIIN={iin}\tOTP={oneTimePassword}{Environment.NewLine}";
             await File.AppendAllTextAsync(path, line, cancellationToken);
             logger.LogInformation(
-                "Личный кабинет: одноразовый пароль записан в {Path} (dev) для {EmployeeId}",
+                "OTP личного кабинета записан в {Path} для {EmployeeId}",
                 path,
                 employeeId);
         }

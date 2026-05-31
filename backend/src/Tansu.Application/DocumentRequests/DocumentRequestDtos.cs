@@ -85,6 +85,9 @@ public static class DocumentRequestLabels
         "hr" => "Кадры",
         "finance" => "Финансы",
         "management" => "Руководство",
+        "oid" => "ОИД",
+        "safety" => "БиОТ/ТБ",
+        "security" => "СБ",
         _ => role
     };
 }

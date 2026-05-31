@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <EmbeddedResource Include="Persistence\Scripts\*.sql" />
+    <EmbeddedResource Include="Seeding\Assets\demo-portrait.jpg" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Tansu.Domain\Tansu.Domain.csproj" />

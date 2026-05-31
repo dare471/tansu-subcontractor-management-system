@@ -27,6 +27,8 @@ public sealed record EmployeePortalProfileDto(
     string? ProjectName,
     string? ApprovalStatus,
     bool HasPhoto,
+    string? PhotoReviewStatus,
+    string? PhotoReviewReason,
     DateTimeOffset? AccessPassIssuedAt);
 
 public sealed record EmployeePortalSiteVisitsDto(

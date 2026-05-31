@@ -1,18 +1,23 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, h } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   NCard, NSpace, NButton, NTag, NTimeline, NTimelineItem, NH3, NText, NEmpty,
-  NAlert, NModal, NForm, NFormItem, NInput, useMessage
+  NAlert, NModal, NForm, NFormItem, NInput, NSelect, NUpload, NDataTable,
+  NPopconfirm, useMessage, type DataTableColumns, type UploadFileInfo
 } from 'naive-ui';
 import {
   employeesApi,
   type EmployeeAccessPass,
   type EmployeePpeSummary,
-  type PpeIssuance
+  type PpeIssuance,
+  type EmployeeDocumentsSummary,
+  type EmployeeDocument,
+  type EmployeeBlockStatus
 } from '@/api/employees';
 import { apiClient } from '@/api/client';
 import { toApiError } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
 
 type HistoryRow = {
   sheetId: string;
@@ -36,14 +41,27 @@ type SiteVisit = {
   verificationMethod: string;
 };
 
+const DOCUMENT_TYPES = [
+  { label: 'Удостоверение личности', value: 'id_card' },
+  { label: 'Сертификат / допуск', value: 'certificate' },
+  { label: 'Инструктаж по ТБ', value: 'safety_briefing' },
+  { label: 'Медицинская справка', value: 'medical' },
+  { label: 'Допуск на работы', value: 'permit' },
+  { label: 'Иной документ', value: 'other' }
+];
+
 const route = useRoute();
 const router = useRouter();
 const msg = useMessage();
+const auth = useAuthStore();
 const employeeId = route.params.id as string;
+
 const data = ref<EmployeeApprovalsDto | null>(null);
 const pass = ref<EmployeeAccessPass | null>(null);
 const siteVisits = ref<SiteVisit[]>([]);
 const ppe = ref<EmployeePpeSummary | null>(null);
+const documents = ref<EmployeeDocumentsSummary | null>(null);
+const blocks = ref<EmployeeBlockStatus | null>(null);
 const qrBlobUrl = ref<string | null>(null);
 const loading = ref(false);
 
@@ -52,11 +70,22 @@ const issueType = ref<'helmet' | 'uniform'>('helmet');
 const issueForm = ref({ size: '', inventoryNumber: '', notes: '' });
 const issuing = ref(false);
 
-const isApproved = computed(() => data.value?.currentStatus === 'approved');
+const showBlockModal = ref(false);
+const blockReason = ref('');
+const blocking = ref(false);
 
-const issueModalTitle = computed(() =>
-  issueType.value === 'helmet' ? 'Выдать каску' : 'Выдать униформу'
-);
+const showDocModal = ref(false);
+const docForm = ref({ name: '', documentType: 'id_card', expiresAt: '' });
+const replaceDocId = ref<string | null>(null);
+const uploadingDoc = ref(false);
+
+const previewUrl = ref<string | null>(null);
+const previewContentType = ref<string | null>(null);
+const showPreview = ref(false);
+
+const isApproved = computed(() => data.value?.currentStatus === 'approved');
+const canBlock = computed(() => auth.canBlockEmployee && isApproved.value && !blocks.value?.isBlocked);
+const canUploadDocs = computed(() => auth.isTansu || auth.isSubcontractor);
 
 async function loadQr() {
   if (qrBlobUrl.value) {
@@ -76,8 +105,16 @@ async function loadQr() {
 async function load() {
   loading.value = true;
   try {
-    data.value = await employeesApi.approvals(employeeId) as EmployeeApprovalsDto;
-    if (data.value.currentStatus === 'approved') {
+    const [approvals, docs, blockStatus] = await Promise.all([
+      employeesApi.approvals(employeeId) as Promise<EmployeeApprovalsDto>,
+      employeesApi.documents(employeeId),
+      employeesApi.blocks(employeeId)
+    ]);
+    data.value = approvals;
+    documents.value = docs;
+    blocks.value = blockStatus;
+
+    if (data.value.currentStatus === 'approved' && !blockStatus.isBlocked) {
       try {
         pass.value = await employeesApi.accessPass(employeeId);
         await loadQr();
@@ -97,6 +134,87 @@ async function load() {
     msg.error(toApiError(e).detail);
   } finally {
     loading.value = false;
+  }
+}
+
+async function submitBlock() {
+  if (blockReason.value.trim().length < 3) {
+    msg.warning('Укажите причину блокировки (не короче 3 символов).');
+    return;
+  }
+  blocking.value = true;
+  try {
+    await employeesApi.block(employeeId, blockReason.value.trim());
+    msg.success('Сотрудник заблокирован. Субподрядчик уведомлён.');
+    showBlockModal.value = false;
+    blockReason.value = '';
+    await load();
+  } catch (e) {
+    msg.error(toApiError(e).detail);
+  } finally {
+    blocking.value = false;
+  }
+}
+
+function openUploadDoc(replace?: EmployeeDocument) {
+  replaceDocId.value = replace?.id ?? null;
+  docForm.value = {
+    name: replace?.name ?? '',
+    documentType: replace?.documentType ?? 'id_card',
+    expiresAt: ''
+  };
+  showDocModal.value = true;
+}
+
+async function onDocFileChange(options: { file: UploadFileInfo }) {
+  const raw = options.file.file;
+  if (!raw) return;
+  if (!docForm.value.name.trim()) {
+    msg.warning('Укажите наименование документа.');
+    return;
+  }
+  uploadingDoc.value = true;
+  try {
+    await employeesApi.uploadDocument(
+      employeeId,
+      raw,
+      docForm.value.name.trim(),
+      docForm.value.documentType,
+      docForm.value.expiresAt || undefined,
+      replaceDocId.value ?? undefined
+    );
+    msg.success(replaceDocId.value ? 'Новая версия загружена' : 'Документ загружен');
+    showDocModal.value = false;
+    documents.value = await employeesApi.documents(employeeId);
+  } catch (e) {
+    msg.error(toApiError(e).detail);
+  } finally {
+    uploadingDoc.value = false;
+  }
+}
+
+async function previewDocument(doc: EmployeeDocument) {
+  try {
+    const res = await apiClient.get(
+      `/api/employees/${employeeId}/documents/${doc.id}/file`,
+      { responseType: 'blob' }
+    );
+    if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
+    previewUrl.value = URL.createObjectURL(res.data);
+    previewContentType.value = doc.contentType;
+    showPreview.value = true;
+  } catch (e) {
+    msg.error(toApiError(e).detail);
+  }
+}
+
+async function removeDocument(doc: EmployeeDocument) {
+  try {
+    await employeesApi.deleteDocument(employeeId, doc.id);
+    msg.success('Документ удалён');
+    documents.value = await employeesApi.documents(employeeId);
+  } catch (e) {
+    msg.error(toApiError(e).detail);
   }
 }
 
@@ -151,18 +269,121 @@ function statusLabel(s: string) {
     : s;
 }
 
+function blockActionLabel(action: string) {
+  return action === 'block' ? 'Блокировка' : 'Разблокировка';
+}
+
+const docColumns: DataTableColumns<EmployeeDocument> = [
+  { title: 'Документ', key: 'name', ellipsis: { tooltip: true } },
+  { title: 'Тип', key: 'documentTypeLabel', width: 160 },
+  {
+    title: 'Загружен', key: 'uploadedAt', width: 150,
+    render: (r) => new Date(r.uploadedAt).toLocaleDateString('ru-RU')
+  },
+  {
+    title: 'Срок', key: 'expiresAt', width: 120,
+    render: (r) => {
+      if (!r.expiresAt) return '—';
+      if (r.isExpired) return 'Истёк';
+      if (r.isExpiringSoon) return '≤ 14 дн.';
+      return new Date(r.expiresAt).toLocaleDateString('ru-RU');
+    }
+  },
+  { title: 'Версия', key: 'versionNo', width: 72, align: 'center' },
+  {
+    title: '', key: 'actions', width: 220,
+    render: (row) => h(NSpace, { size: 'small' }, () => [
+      h(NButton, { size: 'tiny', onClick: () => previewDocument(row) }, () => 'Просмотр'),
+      canUploadDocs.value && !row.isSuperseded
+        ? h(NButton, { size: 'tiny', onClick: () => openUploadDoc(row) }, () => 'Новая версия')
+        : null,
+      canUploadDocs.value && !row.isSuperseded
+        ? h(NPopconfirm, { onPositiveClick: () => removeDocument(row) }, {
+            default: () => 'Удалить документ?',
+            trigger: () => h(NButton, { size: 'tiny', type: 'error' }, () => 'Удалить')
+          })
+        : null
+    ])
+  }
+];
+
 onMounted(load);
 </script>
 
 <template>
   <NCard>
     <NSpace vertical>
-      <NSpace justify="space-between" align="center">
-        <NH3 style="margin:0">История согласования</NH3>
-        <NButton @click="router.back()">Назад</NButton>
+      <NSpace justify="space-between" align="center" wrap>
+        <NH3 style="margin:0">Карточка сотрудника</NH3>
+        <NSpace>
+          <NButton v-if="canBlock" type="error" @click="showBlockModal = true">Заблокировать</NButton>
+          <NButton @click="router.back()">Назад</NButton>
+        </NSpace>
       </NSpace>
 
-      <NCard v-if="isApproved" title="СИЗ — каска и униформа" size="small" :bordered="true">
+      <NAlert v-if="blocks?.isBlocked" type="error" title="Сотрудник заблокирован">
+        {{ blocks.lastRecord?.reason }}
+        <template #footer>
+          Доступ на объект отозван. Для восстановления необходимо повторное согласование.
+        </template>
+      </NAlert>
+
+      <NCard title="Документы" size="small" :bordered="true">
+        <NSpace vertical :size="12">
+          <NAlert v-if="documents?.expiringWithin14Days" type="warning" :show-icon="false">
+            {{ documents.expiringWithin14Days }} документ(ов) истекает в ближайшие 14 дней.
+          </NAlert>
+          <NButton v-if="canUploadDocs" size="small" type="primary" @click="openUploadDoc()">
+            Загрузить документ
+          </NButton>
+          <NDataTable
+            v-if="documents?.documents.length"
+            size="small"
+            :columns="docColumns"
+            :data="documents.documents"
+            :row-key="(r) => r.id"
+          />
+          <NEmpty v-else description="Документы не загружены" />
+        </NSpace>
+      </NCard>
+
+      <NCard title="Журнал блокировок и нарушений" size="small" :bordered="true">
+        <NEmpty v-if="!blocks?.history.length" description="Записей нет" />
+        <NTimeline v-else>
+          <NTimelineItem
+            v-for="item in blocks.history"
+            :key="item.id"
+            :type="item.actionType === 'block' ? 'error' : 'success'"
+            :title="blockActionLabel(item.actionType)"
+            :time="item.createdAt"
+          >
+            <NSpace vertical :size="4">
+              <NText depth="3">
+                {{ item.initiatedByFullName }}
+                <template v-if="item.initiatorRoleLabel"> · {{ item.initiatorRoleLabel }}</template>
+              </NText>
+              <NText>{{ item.reason }}</NText>
+              <NTag v-if="item.status" size="small" :type="item.status === 'applied' ? 'success' : 'default'">
+                {{ item.status === 'applied' ? 'Применено' : item.status }}
+              </NTag>
+            </NSpace>
+          </NTimelineItem>
+        </NTimeline>
+      </NCard>
+
+      <NCard v-if="isApproved && !blocks?.isBlocked && pass" title="QR-пропуск" size="small" :bordered="true">
+        <NSpace align="center" :size="20">
+          <img v-if="qrBlobUrl" :src="qrBlobUrl" alt="QR пропуск" width="160" height="160" />
+          <NSpace vertical :size="8">
+            <NText depth="3">Выдан: {{ new Date(pass.issuedAt).toLocaleString('ru-RU') }}</NText>
+            <NAlert v-if="!pass.hasReferencePhoto" type="warning" :show-icon="false">
+              Загрузите фото сотрудника — без него Face ID на проходной не сработает.
+            </NAlert>
+          </NSpace>
+        </NSpace>
+      </NCard>
+
+      <NCard v-if="isApproved && !blocks?.isBlocked" title="СИЗ — каска и униформа" size="small" :bordered="true">
         <NSpace vertical :size="12">
           <NSpace wrap>
             <NTag :type="ppe?.hasHelmet ? 'success' : 'warning'">
@@ -173,44 +394,13 @@ onMounted(load);
             </NTag>
           </NSpace>
           <NSpace wrap>
-            <NButton size="small" type="primary" @click="openIssue('helmet')">
-              {{ ppe?.hasHelmet ? 'Перевыдать каску' : 'Выдать каску' }}
-            </NButton>
-            <NButton size="small" type="primary" @click="openIssue('uniform')">
-              {{ ppe?.hasUniform ? 'Перевыдать униформу' : 'Выдать униформу' }}
-            </NButton>
-          </NSpace>
-          <template v-if="ppe?.activeHelmet">
-            <NText depth="3">
-              Каска: {{ new Date(ppe.activeHelmet.issuedAt).toLocaleString('ru-RU') }}
-              <template v-if="ppe.activeHelmet.size"> · р. {{ ppe.activeHelmet.size }}</template>
-            </NText>
-            <NButton size="tiny" @click="returnPpe(ppe.activeHelmet!)">Оформить возврат каски</NButton>
-          </template>
-          <template v-if="ppe?.activeUniform">
-            <NText depth="3">
-              Униформа: {{ new Date(ppe.activeUniform.issuedAt).toLocaleString('ru-RU') }}
-              <template v-if="ppe.activeUniform.size"> · р. {{ ppe.activeUniform.size }}</template>
-            </NText>
-            <NButton size="tiny" @click="returnPpe(ppe.activeUniform!)">Оформить возврат униформы</NButton>
-          </template>
-        </NSpace>
-      </NCard>
-
-      <NCard v-if="isApproved && pass" title="QR-пропуск" size="small" :bordered="true">
-        <NSpace align="center" :size="20">
-          <img v-if="qrBlobUrl" :src="qrBlobUrl" alt="QR пропуск" width="160" height="160" />
-          <NSpace vertical :size="8">
-            <NText depth="3">Выдан: {{ new Date(pass.issuedAt).toLocaleString('ru-RU') }}</NText>
-            <NText depth="3">Проверка: {{ pass.verifyUrl }}</NText>
-            <NAlert v-if="!pass.hasReferencePhoto" type="warning" :show-icon="false">
-              Загрузите фото сотрудника — без него Face ID на проходной не сработает.
-            </NAlert>
+            <NButton size="small" type="primary" @click="openIssue('helmet')">Выдать каску</NButton>
+            <NButton size="small" type="primary" @click="openIssue('uniform')">Выдать униформу</NButton>
           </NSpace>
         </NSpace>
       </NCard>
 
-      <NCard v-if="siteVisits.length" title="На объекте" size="small" :bordered="true">
+      <NCard v-if="siteVisits.length" title="Проходы на объект" size="small" :bordered="true">
         <NTimeline>
           <NTimelineItem
             v-for="visit in siteVisits"
@@ -218,19 +408,11 @@ onMounted(load);
             type="success"
             :title="visit.projectName ?? 'Объект'"
             :time="visit.checkedInAt"
-          >
-            <NSpace vertical :size="4">
-              <NText depth="3">
-                Face ID
-                <template v-if="visit.faceConfidence">
-                  · {{ Math.round(visit.faceConfidence * 100) }}%
-                </template>
-              </NText>
-            </NSpace>
-          </NTimelineItem>
+          />
         </NTimeline>
       </NCard>
 
+      <NH3 style="margin:8px 0 0">История согласования</NH3>
       <NEmpty v-if="data && data.rounds.length === 0" description="Сотрудник ещё не отправлялся на согласование" />
       <template v-for="(round, idx) in data?.rounds ?? []" :key="round.roundId">
         <NCard size="small" :title="`Цикл №${idx + 1}`" :bordered="true">
@@ -245,27 +427,48 @@ onMounted(load);
               :title="`Шаг ${step.orderNo}: ${step.approverFullName}`"
               :time="step.decidedAt ?? step.createdAt"
             >
-              <NSpace vertical :size="6">
-                <NTag :type="statusType(step.status)">{{ statusLabel(step.status) }}</NTag>
-                <NText v-if="step.comment" depth="2">«{{ step.comment }}»</NText>
-              </NSpace>
+              <NTag :type="statusType(step.status)">{{ statusLabel(step.status) }}</NTag>
+              <NText v-if="step.comment" depth="2" style="display:block;margin-top:4px">«{{ step.comment }}»</NText>
             </NTimelineItem>
           </NTimeline>
         </NCard>
       </template>
     </NSpace>
 
-    <NModal v-model:show="showIssueModal" preset="card" :title="issueModalTitle" style="max-width:420px">
+    <NModal v-model:show="showBlockModal" preset="card" title="Блокировка сотрудника" style="max-width:480px">
+      <NAlert type="warning" :show-icon="false" style="margin-bottom:12px">
+        Доступ на объект (Hikvision) будет отозван. Субподрядчик получит уведомление с указанной причиной.
+      </NAlert>
+      <NInput v-model:value="blockReason" type="textarea" :rows="4" placeholder="Причина / нарушение (обязательно)" />
+      <NSpace justify="end" style="margin-top:16px">
+        <NButton @click="showBlockModal = false">Отмена</NButton>
+        <NButton type="error" :loading="blocking" @click="submitBlock">Заблокировать</NButton>
+      </NSpace>
+    </NModal>
+
+    <NModal v-model:show="showDocModal" preset="card" :title="replaceDocId ? 'Новая версия документа' : 'Загрузить документ'" style="max-width:480px">
+      <NForm @submit.prevent>
+        <NFormItem label="Наименование"><NInput v-model:value="docForm.name" /></NFormItem>
+        <NFormItem label="Тип"><NSelect v-model:value="docForm.documentType" :options="DOCUMENT_TYPES" /></NFormItem>
+        <NFormItem label="Срок действия"><NInput v-model:value="docForm.expiresAt" type="date" /></NFormItem>
+        <NFormItem label="Файл (PDF, JPG, PNG)">
+          <NUpload accept=".pdf,.jpg,.jpeg,.png" :max="1" :show-file-list="false" :disabled="uploadingDoc" @change="onDocFileChange">
+            <NButton :loading="uploadingDoc">Выбрать файл</NButton>
+          </NUpload>
+        </NFormItem>
+      </NForm>
+    </NModal>
+
+    <NModal v-model:show="showPreview" preset="card" title="Просмотр документа" style="width:90%;max-width:900px" @after-leave="previewUrl = null">
+      <iframe v-if="previewUrl && previewContentType === 'application/pdf'" :src="previewUrl" style="width:100%;height:70vh;border:none" />
+      <img v-else-if="previewUrl" :src="previewUrl" alt="Документ" style="max-width:100%;height:auto" />
+    </NModal>
+
+    <NModal v-model:show="showIssueModal" preset="card" :title="issueType === 'helmet' ? 'Выдать каску' : 'Выдать униформу'" style="max-width:420px">
       <NForm @submit.prevent="submitIssue">
-        <NFormItem label="Размер">
-          <NInput v-model:value="issueForm.size" placeholder="Необязательно" />
-        </NFormItem>
-        <NFormItem label="Инвентарный №">
-          <NInput v-model:value="issueForm.inventoryNumber" placeholder="Необязательно" />
-        </NFormItem>
-        <NFormItem label="Примечание">
-          <NInput v-model:value="issueForm.notes" type="textarea" placeholder="Необязательно" />
-        </NFormItem>
+        <NFormItem label="Размер"><NInput v-model:value="issueForm.size" /></NFormItem>
+        <NFormItem label="Инвентарный №"><NInput v-model:value="issueForm.inventoryNumber" /></NFormItem>
+        <NFormItem label="Примечание"><NInput v-model:value="issueForm.notes" type="textarea" /></NFormItem>
         <NSpace justify="end">
           <NButton @click="showIssueModal = false">Отмена</NButton>
           <NButton type="primary" :loading="issuing" @click="submitIssue">Выдать</NButton>

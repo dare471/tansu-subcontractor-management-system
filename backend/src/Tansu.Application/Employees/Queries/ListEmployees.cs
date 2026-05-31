@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Tansu.Application.Auth;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Application.EmployeeDocuments;
 using Tansu.Domain.Entities;
 using Tansu.Domain.Enums;
 
@@ -12,11 +14,20 @@ public sealed record ListEmployeesQuery(
     Guid? SubcontractorId,
     string? Search) : IRequest<IReadOnlyList<EmployeeDto>>;
 
-public sealed class ListEmployeesHandler(ITansuDbContext db, ICurrentUser currentUser)
-    : IRequestHandler<ListEmployeesQuery, IReadOnlyList<EmployeeDto>>
+public sealed class ListEmployeesHandler(
+    ITansuDbContext db,
+    ICurrentUser currentUser,
+    ITansuAccessService accessService) : IRequestHandler<ListEmployeesQuery, IReadOnlyList<EmployeeDto>>
 {
     public async Task<IReadOnlyList<EmployeeDto>> Handle(ListEmployeesQuery req, CancellationToken ct)
     {
+        var access = await accessService.GetAccessAsync(ct);
+        if (currentUser.UserType == UserType.Tansu)
+        {
+            accessService.EnsurePermission(
+                access, p => p.CanViewEmployees, "Нет доступа к сотрудникам.");
+        }
+
         var q = db.Employees.AsNoTracking().AsQueryable();
 
         if (currentUser.UserType == UserType.Subcontractor)
@@ -25,13 +36,27 @@ public sealed class ListEmployeesHandler(ITansuDbContext db, ICurrentUser curren
                 ?? throw new ForbiddenException("Контекст субподрядчика отсутствует.");
             q = q.Where(e => e.SubcontractorId == sid);
         }
-        else if (req.SubcontractorId is { } reqSid)
+        else if (access.VisibleSubcontractorIds is { } scopeSubs)
         {
+            q = q.Where(e => scopeSubs.Contains(e.SubcontractorId));
+        }
+
+        if (access.VisibleProjectOids is { } scopeProjects)
+            q = q.Where(e => scopeProjects.Contains(e.ProjectOid));
+
+        if (req.SubcontractorId is { } reqSid)
+        {
+            if (access.VisibleSubcontractorIds is { } visible && !visible.Contains(reqSid))
+                throw new ForbiddenException("Субподрядчик вне вашей области видимости.");
             q = q.Where(e => e.SubcontractorId == reqSid);
         }
 
         if (req.ProjectOid is { } poid)
+        {
+            if (access.VisibleProjectOids is { } projects && !projects.Contains(poid))
+                throw new ForbiddenException("Проект вне вашей области видимости.");
             q = q.Where(e => e.ProjectOid == poid);
+        }
 
         if (!string.IsNullOrWhiteSpace(req.Search))
         {
@@ -83,11 +108,21 @@ public sealed class ListEmployeesHandler(ITansuDbContext db, ICurrentUser curren
                 .Where(b => submittedBatchIds.Contains(b.Id))
                 .ToDictionaryAsync(b => b.Id, b => b.Title, ct);
 
+        var blockRows = await db.EmployeeBlockRecords.AsNoTracking()
+            .Where(r => ids.Contains(r.EmployeeId))
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new { r.EmployeeId, r.ActionType, r.Reason })
+            .ToListAsync(ct);
+
+        var lastBlockByEmployee = blockRows
+            .GroupBy(r => r.EmployeeId)
+            .ToDictionary(g => g.Key, g => g.First());
+
         return list.Select(e =>
         {
             sheetsByEmployee.TryGetValue(e.Id, out var employeeSheets);
             employeeSheets ??= Array.Empty<ApprovalSheetEntry>();
-            var status = ResolveEmployeeStatus(employeeSheets);
+            var status = EmployeeStatusResolver.ResolveFromSheets(employeeSheets);
 
             Guid? draftBatchId = null;
             string? draftBatchTitle = null;
@@ -110,15 +145,22 @@ public sealed class ListEmployeesHandler(ITansuDbContext db, ICurrentUser curren
                 submittedBatchTitle = stitle;
             }
 
+            var isBlocked = false;
+            string? blockReason = null;
+            if (lastBlockByEmployee.TryGetValue(e.Id, out var blockInfo))
+            {
+                isBlocked = blockInfo.ActionType == EmployeeBlockActionType.Block;
+                blockReason = isBlocked ? blockInfo.Reason : null;
+            }
+
             return new EmployeeDto(
                 e.Id, e.SubcontractorId, e.Subcontractor!.Name,
                 e.ProjectOid, e.Project!.Name,
                 e.FullName, e.Position, e.Phone, e.Iin, e.PhotoPath,
+                e.PhotoReviewStatus, e.PhotoReviewReason,
+                isBlocked, blockReason,
                 status, draftBatchId, draftBatchTitle, submittedBatchId, submittedBatchTitle,
                 e.CreatedAt, e.UpdatedAt);
         }).ToList();
     }
-
-    private static string? ResolveEmployeeStatus(IReadOnlyList<ApprovalSheetEntry> sheets) =>
-        EmployeeStatusResolver.ResolveFromSheets(sheets);
 }

@@ -2,6 +2,12 @@ import { apiClient } from './client';
 
 const photoObjectUrlCache = new Map<string, string>();
 
+export type UploadPhotoResult = {
+  photoPath: string;
+  status: string;
+  message: string;
+};
+
 export type Employee = {
   id: string;
   subcontractorId: string;
@@ -13,6 +19,10 @@ export type Employee = {
   phone: string;
   iin: string;
   photoPath: string | null;
+  photoReviewStatus: string | null;
+  photoReviewReason: string | null;
+  isBlocked: boolean;
+  blockReason: string | null;
   currentStatus: string | null;
   draftBatchId: string | null;
   draftBatchTitle: string | null;
@@ -38,7 +48,7 @@ export const employeesApi = {
     const fd = new FormData();
     fd.append('file', file);
     return apiClient
-      .post<{ photoPath: string }>(`/api/employees/${id}/photo`, fd)
+      .post<UploadPhotoResult>(`/api/employees/${id}/photo`, fd)
       .then((r) => r.data);
   },
   invalidatePhotoCache: (id: string) => {
@@ -102,7 +112,85 @@ export const employeesApi = {
   returnPpe: (id: string, issuanceId: string, notes?: string) =>
     apiClient
       .post<PpeIssuance>(`/api/employees/${id}/ppe/${issuanceId}/return`, { notes })
+      .then((r) => r.data),
+
+  documents: (id: string) =>
+    apiClient.get<EmployeeDocumentsSummary>(`/api/employees/${id}/documents`).then((r) => r.data),
+
+  uploadDocument: (
+    id: string,
+    file: File,
+    name: string,
+    documentType: string,
+    expiresAt?: string,
+    replacesDocumentId?: string
+  ) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('name', name);
+    fd.append('documentType', documentType);
+    if (expiresAt) fd.append('expiresAt', expiresAt);
+    if (replacesDocumentId) fd.append('replacesDocumentId', replacesDocumentId);
+    return apiClient
+      .post<EmployeeDocument>(`/api/employees/${id}/documents`, fd)
+      .then((r) => r.data);
+  },
+
+  deleteDocument: (id: string, documentId: string) =>
+    apiClient.delete(`/api/employees/${id}/documents/${documentId}`),
+
+  documentFileUrl: (id: string, documentId: string) =>
+    `${apiClient.defaults.baseURL}/api/employees/${id}/documents/${documentId}/file`,
+
+  blocks: (id: string) =>
+    apiClient.get<EmployeeBlockStatus>(`/api/employees/${id}/blocks`).then((r) => r.data),
+
+  block: (id: string, reason: string) =>
+    apiClient
+      .post<EmployeeBlockRecord>(`/api/employees/${id}/block`, { reason })
       .then((r) => r.data)
+};
+
+export type EmployeeDocument = {
+  id: string;
+  employeeId: string;
+  name: string;
+  documentType: string;
+  documentTypeLabel: string;
+  filePath: string;
+  contentType: string | null;
+  uploadedAt: string;
+  expiresAt: string | null;
+  uploadedByFullName: string;
+  isExpired: boolean;
+  isExpiringSoon: boolean;
+  supersedesDocumentId: string | null;
+  isSuperseded: boolean;
+  versionNo: number;
+};
+
+export type EmployeeDocumentsSummary = {
+  documents: EmployeeDocument[];
+  totalCount: number;
+  expiringWithin14Days: number;
+};
+
+export type EmployeeBlockRecord = {
+  id: string;
+  employeeId: string;
+  initiatedByFullName: string;
+  initiatorRole: string | null;
+  initiatorRoleLabel: string | null;
+  actionType: string;
+  reason: string;
+  status: string;
+  createdAt: string;
+};
+
+export type EmployeeBlockStatus = {
+  isBlocked: boolean;
+  lastRecord: EmployeeBlockRecord | null;
+  history: EmployeeBlockRecord[];
 };
 
 export type EmployeeSiteVisit = {

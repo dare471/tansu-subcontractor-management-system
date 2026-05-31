@@ -21,19 +21,33 @@ public sealed class CreateSubcontractorValidator : AbstractValidator<CreateSubco
     }
 }
 
-public sealed class CreateSubcontractorHandler(ITansuDbContext db)
-    : IRequestHandler<CreateSubcontractorCommand, SubcontractorDto>
+public sealed class CreateSubcontractorHandler(
+    ITansuDbContext db,
+    ICurrentUser currentUser,
+    ITansuAccessService accessService) : IRequestHandler<CreateSubcontractorCommand, SubcontractorDto>
 {
     public async Task<SubcontractorDto> Handle(
         CreateSubcontractorCommand req, CancellationToken ct)
     {
+        var access = await accessService.GetAccessAsync(ct);
+        accessService.EnsurePermission(
+            access, p => p.CanRegisterSubcontractors, "Регистрация субподрядчиков недоступна для вашей роли.");
+
         if (await db.Subcontractors.AnyAsync(x => x.Bin == req.Bin, ct))
             throw new ConflictException("bin_taken", "Субподрядчик с таким БИН уже существует.");
 
-        var entity = new Subcontractor { Name = req.Name.Trim(), Bin = req.Bin.Trim() };
+        var userId = currentUser.UserId ?? throw new UnauthorizedException();
+
+        var entity = new Subcontractor
+        {
+            Name = req.Name.Trim(),
+            Bin = req.Bin.Trim(),
+            RegisteredByUserId = userId,
+            IsActive = true
+        };
         db.Subcontractors.Add(entity);
         await db.SaveChangesAsync(ct);
 
-        return new SubcontractorDto(entity.Id, entity.Name, entity.Bin, 0, 0, 0, entity.CreatedAt);
+        return new SubcontractorDto(entity.Id, entity.Name, entity.Bin, 0, 0, 0, entity.IsActive, entity.CreatedAt);
     }
 }

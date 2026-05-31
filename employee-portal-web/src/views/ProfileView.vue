@@ -46,7 +46,9 @@ async function onPhotoChange(options: { file: UploadFileInfo }) {
   uploading.value = true;
   try {
     const result = await employeePortalApi.uploadPhoto(raw);
-    msg.success(result.message);
+    if (result.status === 'approved') msg.success(result.message);
+    else if (result.status === 'pending') msg.warning(result.message);
+    else msg.error(result.message);
     await load();
   } catch (e) {
     msg.error(toApiError(e).detail);
@@ -99,10 +101,27 @@ onUnmounted(() => {
 
     <section class="portal-card">
       <h2 class="portal-card__title">Фото для Face ID</h2>
-      <NAlert type="info" :show-icon="false" style="margin-bottom:12px">
-        Чёткое фото лица для проверки на проходной.
+      <NAlert
+        v-if="profile.photoReviewStatus === 'rejected'"
+        type="error"
+        :show-icon="false"
+        style="margin-bottom:12px"
+      >
+        {{ profile.photoReviewReason ?? 'Фото отклонено. Загрузите новое.' }}
       </NAlert>
-      <NUpload accept="image/*" :max="1" :show-file-list="false" :disabled="uploading" @change="onPhotoChange">
+      <NAlert
+        v-else-if="profile.photoReviewStatus === 'pending'"
+        type="warning"
+        :show-icon="false"
+        style="margin-bottom:12px"
+      >
+        Фото на проверке у ответственного сотрудника ТАНСУ.
+      </NAlert>
+      <NAlert type="info" :show-icon="false" style="margin-bottom:12px">
+        JPEG/JPG, 40–200 КБ, лицо без очков и головных уборов, нейтральный фон (Hikvision).
+        Отправка на согласование возможна только после одобрения фото.
+      </NAlert>
+      <NUpload accept=".jpg,.jpeg,image/jpeg" :max="1" :show-file-list="false" :disabled="uploading" @change="onPhotoChange">
         <NButton block :loading="uploading" style="min-height:var(--tap-min)">
           {{ profile.hasPhoto ? 'Заменить фото' : 'Загрузить фото' }}
         </NButton>

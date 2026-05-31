@@ -62,7 +62,8 @@ public static class DemoSeeder
             Email = DemoSeedData.TansuAdminEmail,
             UserType = UserType.Tansu,
             PasswordHash = null,
-            IsActive = true
+            IsActive = true,
+            IsSuperUser = true
         };
         var subMontazhUser = new User
         {
@@ -290,6 +291,11 @@ public static class DemoSeeder
             if (user is null) return;
             if (user.FullName != fullName) { user.FullName = fullName; changed = true; }
             if (user.Position != position) { user.Position = position; changed = true; }
+            if (email.Equals(DemoSeedData.TansuAdminEmail, StringComparison.OrdinalIgnoreCase) && !user.IsSuperUser)
+            {
+                user.IsSuperUser = true;
+                changed = true;
+            }
         }
 
         await EnsureUser(DemoSeedData.TansuAdminEmail, DemoSeedData.TansuAdminFullName, DemoSeedData.TansuAdminPosition, UserType.Tansu);

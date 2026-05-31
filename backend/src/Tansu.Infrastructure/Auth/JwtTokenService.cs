@@ -30,6 +30,7 @@ public class JwtTokenService : IJwtTokenService
             new(JwtRegisteredClaimNames.UniqueName, user.Email),
             new("user_type", user.UserType),
             new("must_change_password", user.MustChangePassword ? "true" : "false"),
+            new("is_superuser", user.IsSuperUser ? "true" : "false"),
         };
 
         if (user.SubcontractorId is { } sid)
@@ -37,6 +38,12 @@ public class JwtTokenService : IJwtTokenService
 
         if (user.EmployeeId is { } eid)
             claims.Add(new Claim("employee_id", eid.ToString()));
+
+        if (!string.IsNullOrWhiteSpace(user.ApproverRole))
+            claims.Add(new Claim("approver_role", user.ApproverRole));
+
+        if (!string.IsNullOrWhiteSpace(user.TansuRole))
+            claims.Add(new Claim("tansu_role", user.TansuRole));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

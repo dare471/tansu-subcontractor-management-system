@@ -10,6 +10,8 @@ public class Employee
     public string Phone { get; set; } = string.Empty;
     public string Iin { get; set; } = string.Empty;
     public string? PhotoPath { get; set; }
+    public string? PhotoReviewStatus { get; set; }
+    public string? PhotoReviewReason { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 

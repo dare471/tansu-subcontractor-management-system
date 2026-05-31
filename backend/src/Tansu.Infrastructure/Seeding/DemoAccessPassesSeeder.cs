@@ -9,9 +9,6 @@ using Tansu.Domain.Entities;
 
 namespace Tansu.Infrastructure.Seeding;
 
-/// <summary>
-/// Выдаёт QR-пропуска сотрудникам, согласованным до появления функции пропусков.
-/// </summary>
 public static class DemoAccessPassesSeeder
 {
     public static async Task EnsureAsync(IServiceProvider services)
@@ -56,6 +53,6 @@ public static class DemoAccessPassesSeeder
         }
 
         if (issued > 0)
-            logger.LogInformation("Выдано {Count} QR-пропусков для ранее согласованных сотрудников.", issued);
+            logger.LogInformation("Выдано {Count} QR-пропусков.", issued);
     }
 }

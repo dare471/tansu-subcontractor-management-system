@@ -220,6 +220,7 @@ public sealed class SubmitEmployeeBatchHandler(
 
         foreach (var employee in employees)
         {
+            await EmployeeSubmitCore.EnsurePhotoApprovedAsync(db, employee, mediator, ct);
             await EmployeeSubmitCore.EnsureSubmittableAsync(db, employee, batch.Id, ct);
             var prepared = await EmployeeSubmitCore.PrepareSubmissionAsync(
                 db, employee, initiatorId, batch.Id, ct);

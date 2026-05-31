@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import DETECTOR, MODEL, PORT
 from app.verifier import VerifyResult, detect_face, verify_faces, warm_up_model
+from app.reference_photo import validate_reference_photo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,6 +27,13 @@ app = FastAPI(title="Tansu Face Verify", version="1.0.0", lifespan=lifespan)
 @app.get("/health")
 def health():
     return {"status": "ok", "model": MODEL, "detector": DETECTOR}
+
+
+@app.post("/api/validate-reference-photo")
+async def validate_reference_photo_endpoint(photo: UploadFile = File(...)):
+    image_bytes = await photo.read()
+    result = validate_reference_photo(image_bytes)
+    return JSONResponse(result.to_dict())
 
 
 @app.post("/api/detect-face")

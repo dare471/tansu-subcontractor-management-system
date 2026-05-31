@@ -8,9 +8,6 @@ using Tansu.Domain.Entities;
 
 namespace Tansu.Infrastructure.Seeding;
 
-/// <summary>
-/// Создаёт личные кабинеты для сотрудников, согласованных до появления функции.
-/// </summary>
 public static class DemoEmployeePortalSeeder
 {
     public static async Task EnsureAsync(IServiceProvider services)

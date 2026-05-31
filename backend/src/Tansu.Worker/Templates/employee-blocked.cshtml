@@ -1,0 +1,19 @@
+@model dynamic
+@{
+    Layout = "_layout";
+    ViewBag.Title = "Блокировка сотрудника";
+}
+
+<h2>Сотрудник заблокирован</h2>
+<p>
+    Сотрудник <strong>@Model.EmployeeFullName</strong> (субподрядчик «@Model.SubcontractorName»,
+    объект: @Model.ProjectName) заблокирован.
+</p>
+<p>
+    <strong>Инициатор:</strong> @Model.InitiatorFullName (@Model.InitiatorRole)<br />
+    <strong>Причина:</strong> @Model.Reason
+</p>
+<p>
+    Доступ на объект отозван. Для восстановления необходимо повторно пройти процедуру согласования.
+</p>
+<p><a href="@Model.CardUrl">Открыть карточку сотрудника</a></p>

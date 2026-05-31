@@ -1,6 +1,7 @@
 using MassTransit;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Tansu.Application.Auth;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Contracts.Messages;
@@ -12,11 +13,16 @@ public sealed record ResetPasswordCommand(Guid Id) : IRequest<string>;
 
 public sealed class ResetPasswordHandler(
     ITansuDbContext db,
+    ITansuAccessService accessService,
     IPasswordHasher hasher,
     IPublishEndpoint publisher) : IRequestHandler<ResetPasswordCommand, string>
 {
     public async Task<string> Handle(ResetPasswordCommand req, CancellationToken ct)
     {
+        var access = await accessService.GetAccessAsync(ct);
+        accessService.EnsurePermission(
+            access, p => p.CanManageTansuUsers, "Управление пользователями доступно только глобальному администратору.");
+
         var u = await db.Users.FirstOrDefaultAsync(x => x.Id == req.Id, ct)
             ?? throw new NotFoundException("User", req.Id);
 

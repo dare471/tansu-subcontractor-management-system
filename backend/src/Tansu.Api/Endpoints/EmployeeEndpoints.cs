@@ -9,6 +9,9 @@ using Tansu.Application.Employees.Queries;
 using Tansu.Application.PpeIssuance;
 using Tansu.Application.PpeIssuance.Commands;
 using Tansu.Application.PpeIssuance.Queries;
+using Tansu.Application.EmployeeDocuments;
+using Tansu.Application.EmployeeDocuments.Commands;
+using Tansu.Application.EmployeeDocuments.Queries;
 using Tansu.Domain.Enums;
 
 namespace Tansu.Api.Endpoints;
@@ -67,12 +70,12 @@ public static class EmployeeEndpoints
             var file = form.Files["file"] ?? form.Files.FirstOrDefault();
             if (file is null || file.Length == 0)
                 return Results.BadRequest(new { code = "bad_request", detail = "Файл не передан." });
-            if (file.Length > 5 * 1024 * 1024)
-                return Results.BadRequest(new { code = "file_too_large", detail = "Файл больше 5 МБ." });
+            if (file.Length > 200 * 1024)
+                return Results.BadRequest(new { code = "file_too_large", detail = "Файл больше 200 КБ (требование Hikvision)." });
 
             await using var stream = file.OpenReadStream();
-            var relative = await m.Send(new UploadPhotoCommand(id, file.FileName, stream), ct);
-            return Results.Ok(new { photoPath = relative });
+            var result = await m.Send(new UploadPhotoCommand(id, file.FileName, stream), ct);
+            return Results.Ok(result);
         })
         .DisableAntiforgery();
 
@@ -109,6 +112,84 @@ public static class EmployeeEndpoints
             IMediator m, CancellationToken ct) =>
                 Results.Ok(await m.Send(new ReturnEmployeePpeCommand(id, issuanceId, req.Notes), ct)))
         .WithSummary("Оформить возврат СИЗ.");
+
+        g.MapGet("/{id:guid}/documents", async (
+            Guid id, IMediator m, CancellationToken ct) =>
+                Results.Ok(await m.Send(new GetEmployeeDocumentsQuery(id), ct)))
+        .WithSummary("Документы сотрудника.");
+
+        g.MapPost("/{id:guid}/documents", async (
+            Guid id, HttpRequest http, IMediator m, CancellationToken ct) =>
+        {
+            if (!http.HasFormContentType)
+                return Results.BadRequest(new { code = "bad_request", detail = "Ожидается multipart/form-data." });
+
+            var form = await http.ReadFormAsync(ct);
+            var file = form.Files["file"] ?? form.Files.FirstOrDefault();
+            if (file is null || file.Length == 0)
+                return Results.BadRequest(new { code = "bad_request", detail = "Файл не передан." });
+            if (file.Length > 10 * 1024 * 1024)
+                return Results.BadRequest(new { code = "file_too_large", detail = "Файл больше 10 МБ." });
+
+            var name = form["name"].FirstOrDefault()?.Trim();
+            var docType = form["documentType"].FirstOrDefault()?.Trim();
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(docType))
+                return Results.BadRequest(new { code = "bad_request", detail = "Укажите name и documentType." });
+
+            DateTimeOffset? expiresAt = null;
+            var expiresRaw = form["expiresAt"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(expiresRaw) &&
+                DateTimeOffset.TryParse(expiresRaw, out var parsed))
+            {
+                expiresAt = parsed;
+            }
+
+            Guid? replacesDocumentId = null;
+            var replacesRaw = form["replacesDocumentId"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(replacesRaw) &&
+                Guid.TryParse(replacesRaw, out var replacesParsed))
+            {
+                replacesDocumentId = replacesParsed;
+            }
+
+            await using var stream = file.OpenReadStream();
+            var dto = await m.Send(new UploadEmployeeDocumentCommand(
+                id, name, docType, expiresAt, file.FileName, stream, replacesDocumentId), ct);
+            return Results.Created($"/api/employees/{id}/documents/{dto.Id}", dto);
+        })
+        .DisableAntiforgery()
+        .WithSummary("Загрузить документ сотрудника.");
+
+        g.MapGet("/{id:guid}/documents/{documentId:guid}/file", async (
+            Guid id, Guid documentId, IMediator m, CancellationToken ct) =>
+        {
+            var file = await m.Send(new GetEmployeeDocumentFileQuery(id, documentId), ct);
+            return file is null
+                ? Results.NotFound()
+                : Results.File(file.Value.Stream, file.Value.ContentType, file.Value.FileName);
+        })
+        .WithSummary("Скачать файл документа.");
+
+        g.MapDelete("/{id:guid}/documents/{documentId:guid}", async (
+            Guid id, Guid documentId, IMediator m, CancellationToken ct) =>
+        {
+            await m.Send(new DeleteEmployeeDocumentCommand(id, documentId), ct);
+            return Results.NoContent();
+        })
+        .WithSummary("Удалить документ сотрудника.");
+
+        g.MapGet("/{id:guid}/blocks", async (
+            Guid id, IMediator m, CancellationToken ct) =>
+                Results.Ok(await m.Send(new GetEmployeeBlockStatusQuery(id), ct)))
+        .WithSummary("Блокировки и нарушения сотрудника.");
+
+        g.MapPost("/{id:guid}/block", async (
+            Guid id, [FromBody] BlockEmployeeRequest req, IMediator m, CancellationToken ct) =>
+        {
+            var dto = await m.Send(new BlockEmployeeCommand(id, req.Reason), ct);
+            return Results.Created($"/api/employees/{id}/blocks/{dto.Id}", dto);
+        })
+        .WithSummary("Заблокировать согласованного сотрудника (ОИД / БиОТ/ТБ / СБ).");
 
         return app;
     }

@@ -7,6 +7,7 @@ public sealed record SubcontractorDto(
     int ProjectsCount,
     int EmployeesApprovedCount,
     int EmployeesNotApprovedCount,
+    bool IsActive,
     DateTimeOffset CreatedAt);
 
 public sealed record CreateSubcontractorRequest(string Name, string Bin);

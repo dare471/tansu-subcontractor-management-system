@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Tansu.Application.Auth;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Application.Employees;
 using Tansu.Domain.Entities;
@@ -9,13 +10,31 @@ namespace Tansu.Application.Subcontractors.Queries;
 
 public sealed record ListSubcontractorsQuery(string? Search) : IRequest<IReadOnlyList<SubcontractorDto>>;
 
-public sealed class ListSubcontractorsHandler(ITansuDbContext db)
-    : IRequestHandler<ListSubcontractorsQuery, IReadOnlyList<SubcontractorDto>>
+public sealed class ListSubcontractorsHandler(
+    ITansuDbContext db,
+    ICurrentUser currentUser,
+    ITansuAccessService accessService) : IRequestHandler<ListSubcontractorsQuery, IReadOnlyList<SubcontractorDto>>
 {
     public async Task<IReadOnlyList<SubcontractorDto>> Handle(
         ListSubcontractorsQuery req, CancellationToken ct)
     {
+        var access = await accessService.GetAccessAsync(ct);
+        if (currentUser.UserType == UserType.Tansu)
+        {
+            accessService.EnsurePermission(
+                access,
+                p => p.CanViewEmployees || p.CanRegisterSubcontractors || p.CanApproveEmployees,
+                "Нет доступа к субподрядчикам.");
+        }
+
         var q = db.Subcontractors.AsNoTracking();
+
+        if (access.VisibleSubcontractorIds is { } scopeIds)
+            q = q.Where(x => scopeIds.Contains(x.Id));
+
+        if (!access.IncludeInactiveSubcontractors)
+            q = q.Where(x => x.IsActive);
+
         if (!string.IsNullOrWhiteSpace(req.Search))
         {
             var s = req.Search.Trim().ToLower();
@@ -29,6 +48,7 @@ public sealed class ListSubcontractorsHandler(ITansuDbContext db)
                 x.Id,
                 x.Name,
                 x.Bin,
+                x.IsActive,
                 ProjectsCount = x.Projects.Count,
                 x.CreatedAt
             })
@@ -81,6 +101,7 @@ public sealed class ListSubcontractorsHandler(ITansuDbContext db)
                     x.ProjectsCount,
                     counts.Approved,
                     counts.NotApproved,
+                    x.IsActive,
                     x.CreatedAt);
             })
             .ToList();

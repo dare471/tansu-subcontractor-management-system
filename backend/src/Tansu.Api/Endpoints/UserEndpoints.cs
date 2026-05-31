@@ -20,14 +20,17 @@ public static class UserEndpoints
             [FromQuery] Guid? subcontractorId,
             [FromQuery] string? search,
             IMediator m, CancellationToken ct) =>
-                Results.Ok(await m.Send(new ListUsersQuery(userType, subcontractorId, search), ct)));
+                Results.Ok(await m.Send(new ListUsersQuery(userType, subcontractorId, search), ct)))
+            .WithSummary("Список пользователей (только глобальный администратор).");
 
         g.MapPost("", async (
             [FromBody] CreateUserRequest req,
             IMediator m, CancellationToken ct) =>
         {
             var res = await m.Send(new CreateUserCommand(
-                req.FullName, req.Position, req.Email, req.UserType, req.SubcontractorId, req.ApproverRole), ct);
+                req.FullName, req.Position, req.Email, req.UserType, req.SubcontractorId,
+                req.ApproverRole, req.TansuRole, req.ManagerUserId,
+                req.ProjectOids, req.SubcontractorIds), ct);
             return Results.Created($"/api/users/{res.User.Id}", res);
         });
 
@@ -35,7 +38,8 @@ public static class UserEndpoints
             Guid id, [FromBody] UpdateUserRequest req,
             IMediator m, CancellationToken ct) =>
                 Results.Ok(await m.Send(new UpdateUserCommand(
-                    id, req.FullName, req.Position, req.IsActive, req.ApproverRole), ct)));
+                    id, req.FullName, req.Position, req.IsActive, req.ApproverRole,
+                    req.TansuRole, req.ManagerUserId, req.ProjectOids, req.SubcontractorIds), ct)));
 
         g.MapPost("/{id:guid}/reset-password", async (
             Guid id, IMediator m, CancellationToken ct) =>

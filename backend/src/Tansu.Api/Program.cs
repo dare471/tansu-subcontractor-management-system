@@ -27,6 +27,8 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddHealthChecks();
 
+builder.Services.AddHostedService<Tansu.Infrastructure.EmployeeDocuments.DocumentExpiryNotificationHostedService>();
+
 var app = builder.Build();
 
 await using (var scope = app.Services.CreateAsyncScope())
@@ -40,8 +42,10 @@ await using (var scope = app.Services.CreateAsyncScope())
         await DemoApproversSeeder.EnsureAsync(scope.ServiceProvider);
         await DemoDocumentRequestsSeeder.EnsureAsync(scope.ServiceProvider);
         await DemoSampleApprovalsSeeder.EnsureAsync(scope.ServiceProvider);
+        await DemoEmployeePhotosSeeder.EnsureAsync(scope.ServiceProvider);
         await DemoAccessPassesSeeder.EnsureAsync(scope.ServiceProvider);
         await DemoEmployeePortalSeeder.EnsureAsync(scope.ServiceProvider);
+        await DemoTansuRolesSeeder.EnsureAsync(scope.ServiceProvider);
     }
 }
 
@@ -61,6 +65,8 @@ app.MapUserEndpoints();
 app.MapProjectEndpoints();
 app.MapMatrixEndpoints();
 app.MapEmployeeEndpoints();
+app.MapEmployeePhotoReviewEndpoints();
+app.MapSiteVisitJournalEndpoints();
 app.MapAccessPassEndpoints();
 app.MapInternalVerifyEndpoints();
 app.MapEmployeePortalEndpoints();

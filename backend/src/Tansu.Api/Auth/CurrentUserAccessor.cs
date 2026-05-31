@@ -58,4 +58,11 @@ public sealed class CurrentUserAccessor(IHttpContextAccessor accessor) : ICurren
 
     public bool MustChangePassword =>
         string.Equals(Principal?.FindFirstValue("must_change_password"), "true", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsSuperUser =>
+        string.Equals(Principal?.FindFirstValue("is_superuser"), "true", StringComparison.OrdinalIgnoreCase);
+
+    public string? ApproverRole => Principal?.FindFirstValue("approver_role");
+
+    public string? TansuRole => Principal?.FindFirstValue("tansu_role");
 }

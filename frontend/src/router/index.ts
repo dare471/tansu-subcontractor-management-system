@@ -33,7 +33,7 @@ const routes: RouteRecordRaw[] = [
         path: 'subcontractors',
         name: 'subcontractors',
         component: () => import('@/views/tansu/SubcontractorsView.vue'),
-        meta: { roles: ['TANSU'] }
+        meta: { roles: ['TANSU'], permission: 'canViewEmployees' }
       },
       {
         path: 'projects',
@@ -45,19 +45,19 @@ const routes: RouteRecordRaw[] = [
         path: 'users',
         name: 'users',
         component: () => import('@/views/tansu/UsersView.vue'),
-        meta: { roles: ['TANSU'] }
+        meta: { roles: ['TANSU'], permission: 'canManageTansuUsers' }
       },
       {
         path: 'matrix',
         name: 'matrix',
         component: () => import('@/views/tansu/MatrixView.vue'),
-        meta: { roles: ['TANSU'] }
+        meta: { roles: ['TANSU'], permission: 'canManageApprovalMatrix' }
       },
       {
         path: 'document-matrix',
         name: 'document-matrix',
         component: () => import('@/views/tansu/DocumentMatrixView.vue'),
-        meta: { roles: ['TANSU'] }
+        meta: { roles: ['TANSU'], permission: 'canApproveEmployees' }
       },
       {
         path: 'employees',
@@ -78,21 +78,39 @@ const routes: RouteRecordRaw[] = [
         meta: { roles: ['Subcontractor'] }
       },
       {
+        path: 'tansu/employees',
+        name: 'tansu-employees',
+        component: () => import('@/views/tansu/TansuEmployeesView.vue'),
+        meta: { roles: ['TANSU'], permission: 'canViewEmployees' }
+      },
+      {
         path: 'employees/:id/approvals',
         name: 'employee-approvals',
         component: () => import('@/views/subcontractor/EmployeeApprovalsView.vue')
       },
       {
+        path: 'site-visit-journal',
+        name: 'site-visit-journal',
+        component: () => import('@/views/tansu/SiteVisitJournalView.vue'),
+        meta: { roles: ['TANSU'], permission: 'canViewVisitJournal' }
+      },
+      {
+        path: 'photo-reviews/inbox',
+        name: 'photo-reviews-inbox',
+        component: () => import('@/views/tansu/PhotoReviewsInboxView.vue'),
+        meta: { roles: ['TANSU'] }
+      },
+      {
         path: 'approvals/inbox',
         name: 'approvals-inbox',
         component: () => import('@/views/approvals/InboxView.vue'),
-        meta: { roles: ['TANSU'] }
+        meta: { roles: ['TANSU'], permission: 'canApproveEmployees' }
       },
       {
         path: 'document-requests/inbox',
         name: 'document-requests-inbox',
         component: () => import('@/views/approvals/DocumentRequestsInboxView.vue'),
-        meta: { roles: ['TANSU'] }
+        meta: { roles: ['TANSU'], permission: 'canApproveEmployees' }
       }
     ]
   },
@@ -126,6 +144,11 @@ router.beforeEach(async (to) => {
 
   const roles = to.meta.roles as string[] | undefined;
   if (roles && auth.user && !roles.includes(auth.user.userType)) {
+    return { name: 'home' };
+  }
+
+  const permission = to.meta.permission as keyof typeof auth.permissions | undefined;
+  if (permission && !auth.permissions[permission] && !auth.permissions.isGlobalAdmin) {
     return { name: 'home' };
   }
 

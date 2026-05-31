@@ -84,6 +84,8 @@ public sealed class GetEmployeePortalProfileHandler(
             employee.Project?.Name,
             approvalStatus,
             !string.IsNullOrEmpty(employee.PhotoPath),
+            employee.PhotoReviewStatus,
+            employee.PhotoReviewReason,
             pass?.IssuedAt);
     }
 }

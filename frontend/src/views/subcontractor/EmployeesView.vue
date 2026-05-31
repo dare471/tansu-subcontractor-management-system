@@ -90,9 +90,11 @@ async function remove(row: Employee) {
 async function uploadPhoto(file: File) {
   if (!photoUploadFor.value) return;
   try {
-    await employeesApi.uploadPhoto(photoUploadFor.value.id, file);
+    const result = await employeesApi.uploadPhoto(photoUploadFor.value.id, file);
     employeesApi.invalidatePhotoCache(photoUploadFor.value.id);
-    msg.success('Фото загружено');
+    if (result.status === 'approved') msg.success(result.message);
+    else if (result.status === 'pending') msg.warning(result.message);
+    else msg.error(result.message);
     await load();
   } catch (e) { msg.error(toApiError(e).detail); }
 }
@@ -134,17 +136,56 @@ const projectsWithoutMatrix = computed(() =>
   projects.value.filter((p) => !p.hasApprovalMatrix).map((p) => p.name || p.projectOid)
 );
 
+function photoReviewTag(row: Employee) {
+  if (!row.photoPath) return h(NTag, { size: 'small' }, () => 'Нет фото');
+  const status = row.photoReviewStatus;
+  if (!status) return h(NTag, { size: 'small' }, () => 'Не проверено');
+  const type = status === 'approved' ? 'success'
+    : status === 'rejected' ? 'error'
+    : status === 'pending' ? 'warning'
+    : 'default';
+  const label = status === 'approved' ? 'Фото OK'
+    : status === 'rejected' ? 'Фото отклонено'
+    : status === 'pending' ? 'На проверке'
+    : status;
+  return h(NTag, { size: 'small', type }, () => label);
+}
+
+function canSubmit(row: Employee) {
+  if (!row.photoPath || row.photoReviewStatus !== 'approved') return false;
+  return row.isBlocked || row.currentStatus === 'rejected' || row.currentStatus === null;
+}
+
+function submitDisabledReason(row: Employee) {
+  if (!row.photoPath) return 'Загрузите фото сотрудника';
+  if (row.photoReviewStatus === 'pending') return 'Фото ожидает проверки ТАНСУ';
+  if (row.photoReviewStatus === 'rejected') {
+    return row.photoReviewReason ?? 'Фото отклонено — загрузите новое';
+  }
+  if (row.photoReviewStatus !== 'approved') return 'Фото должно пройти проверку';
+  return '';
+}
+
 function renderSubmitButton(row: Employee) {
   if (row.draftBatchId) {
     return h(NButton, { size: 'small', disabled: true, title: 'Сотрудник в черновике пакета' }, () => 'В пакете');
   }
-  if (row.currentStatus !== 'rejected' && row.currentStatus !== null) return null;
+  if (row.currentStatus !== 'rejected' && row.currentStatus !== null && !row.isBlocked) return null;
 
-  const label = row.currentStatus === 'rejected' ? 'Повторно' : 'На согласование';
+  const label = row.isBlocked || row.currentStatus === 'rejected' ? 'Повторно' : 'На согласование';
   if (!hasApprovalMatrix(row.projectOid)) {
     return h(
       NButton,
       { size: 'small', type: 'primary', disabled: true, title: 'Для проекта не настроена матрица согласования ТАНСУ' },
+      () => label
+    );
+  }
+
+  const disabledReason = submitDisabledReason(row);
+  if (!canSubmit(row)) {
+    return h(
+      NButton,
+      { size: 'small', type: 'primary', disabled: true, title: disabledReason },
       () => label
     );
   }
@@ -157,7 +198,7 @@ function renderSubmitButton(row: Employee) {
   });
 }
 
-const TABLE_SCROLL_X = 1640;
+const TABLE_SCROLL_X = 1840;
 
 const columns: DataTableColumns<Employee> = [
   {
@@ -183,7 +224,23 @@ const columns: DataTableColumns<Employee> = [
     title: 'Проект', key: 'projectName', width: 240,
     ellipsis: { tooltip: true }
   },
-  { title: 'Статус', key: 'currentStatus', width: 150, render: (r) => statusTag(r.currentStatus) },
+  { title: 'Статус', key: 'currentStatus', width: 150, render: (r) => {
+    if (r.isBlocked) return h(NTag, { type: 'error', size: 'small' }, () => 'Заблокирован');
+    return statusTag(r.currentStatus);
+  }},
+  {
+    title: 'Фото', key: 'photoReview', width: 150,
+    render: (r) => {
+      const tag = photoReviewTag(r);
+      if (r.photoReviewStatus === 'rejected' && r.photoReviewReason) {
+        return h(NEllipsis, { style: { maxWidth: '140px' }, tooltip: true }, () => [
+          tag,
+          h('div', { style: { fontSize: '11px', color: 'var(--n-error-color)', marginTop: '4px' } }, r.photoReviewReason)
+        ]);
+      }
+      return tag;
+    }
+  },
   {
     title: 'Пакет', key: 'batch', width: 200,
     render: (r) => {
@@ -265,7 +322,7 @@ function onPhotoInputChange(event: Event) {
       </div>
     </NSpace>
 
-    <input id="photo-input" type="file" accept="image/*" hidden @change="onPhotoInputChange" />
+    <input id="photo-input" type="file" accept=".jpg,.jpeg,image/jpeg" hidden @change="onPhotoInputChange" />
 
     <NModal v-model:show="showForm" preset="card" :title="editing ? 'Изменить сотрудника' : 'Новый сотрудник'" style="width:560px">
       <NForm @submit.prevent="save">

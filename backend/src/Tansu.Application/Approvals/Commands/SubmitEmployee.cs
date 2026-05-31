@@ -25,6 +25,7 @@ public sealed class SubmitEmployeeHandler(
         await mediator.Send(new RevokeEmployeeAccessPassesCommand(req.EmployeeId), ct);
         await mediator.Send(new EmployeePortal.Commands.DeactivateEmployeePortalCommand(req.EmployeeId), ct);
 
+        await EmployeeSubmitCore.EnsurePhotoApprovedAsync(db, employee, mediator, ct);
         await EmployeeSubmitCore.EnsureSubmittableAsync(db, employee, null, ct);
 
         var initiatorId = currentUser.UserId ?? throw new UnauthorizedException();

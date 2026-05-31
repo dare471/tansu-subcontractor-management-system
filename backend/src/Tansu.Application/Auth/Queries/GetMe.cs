@@ -9,7 +9,8 @@ public sealed record GetMeQuery : IRequest<MeResponse>;
 
 public sealed class GetMeHandler(
     ITansuDbContext db,
-    ICurrentUser currentUser) : IRequestHandler<GetMeQuery, MeResponse>
+    ICurrentUser currentUser,
+    ITansuAccessService accessService) : IRequestHandler<GetMeQuery, MeResponse>
 {
     public async Task<MeResponse> Handle(GetMeQuery request, CancellationToken ct)
     {
@@ -18,6 +19,8 @@ public sealed class GetMeHandler(
             .Include(u => u.Subcontractor)
             .FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new UnauthorizedException();
+
+        var access = await accessService.GetAccessAsync(ct);
 
         return new MeResponse(
             user.Id,
@@ -30,6 +33,9 @@ public sealed class GetMeHandler(
             user.Subcontractor?.Bin,
             user.ApproverRole,
             user.MustChangePassword,
-            user.EmployeeId);
+            user.EmployeeId,
+            user.IsSuperUser,
+            access.TansuRole,
+            access.Permissions);
     }
 }

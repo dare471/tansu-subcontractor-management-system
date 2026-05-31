@@ -53,6 +53,8 @@ public sealed class UpdateEmployeeHandler(ITansuDbContext db, ICurrentUser curre
             e.Id, e.SubcontractorId, e.Subcontractor!.Name,
             e.ProjectOid, e.Project?.Name,
             e.FullName, e.Position, e.Phone, e.Iin, e.PhotoPath,
+            e.PhotoReviewStatus, e.PhotoReviewReason,
+            false, null,
             null, null, null, null, null,
             e.CreatedAt, e.UpdatedAt);
     }

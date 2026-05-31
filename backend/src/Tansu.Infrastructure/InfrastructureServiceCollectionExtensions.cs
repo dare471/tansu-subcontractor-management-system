@@ -3,11 +3,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Application.AccessPasses;
+using Tansu.Application.EmployeePhotoReviews;
 using Tansu.Application.EmployeePortal;
 using Tansu.Infrastructure.AccessPasses;
 using Tansu.Infrastructure.Auth;
 using Tansu.Infrastructure.EmployeePortal;
 using Tansu.Infrastructure.FaceVerify;
+using Tansu.Infrastructure.Hik;
 using Tansu.Infrastructure.Persistence;
 using Tansu.Infrastructure.Storage;
 
@@ -34,8 +36,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.Configure<PhotoStorageOptions>(configuration.GetSection(PhotoStorageOptions.SectionName));
         services.Configure<AccessPassOptions>(configuration.GetSection(AccessPassOptions.SectionName));
         services.Configure<EmployeePortalOptions>(configuration.GetSection(EmployeePortalOptions.SectionName));
-
-        services.Configure<EmployeePortalOptions>(configuration.GetSection(EmployeePortalOptions.SectionName));
+        services.Configure<EmployeePhotoReviewOptions>(configuration.GetSection(EmployeePhotoReviewOptions.SectionName));
         services.Configure<FaceVerifyOptions>(configuration.GetSection(FaceVerifyOptions.SectionName));
 
         var faceVerifyUrl = configuration[$"{FaceVerifyOptions.SectionName}:BaseUrl"];
@@ -45,17 +46,26 @@ public static class InfrastructureServiceCollectionExtensions
             {
                 var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FaceVerifyOptions>>().Value;
                 client.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/");
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(60);
+            });
+            services.AddHttpClient<IReferencePhotoValidator, RemoteReferencePhotoValidator>((sp, client) =>
+            {
+                var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FaceVerifyOptions>>().Value;
+                client.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/");
+                client.Timeout = TimeSpan.FromSeconds(60);
             });
         }
         else
         {
             services.AddSingleton<IFacePhotoValidator, StubFacePhotoValidator>();
+            services.AddSingleton<IReferencePhotoValidator, StubReferencePhotoValidator>();
         }
 
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
         services.AddSingleton<IPhotoStorage, LocalPhotoStorage>();
+        services.AddSingleton<IEmployeeDocumentStorage, LocalEmployeeDocumentStorage>();
+        services.AddSingleton<IHikAccessService, StubHikAccessService>();
         services.AddSingleton<IAccessPassQrEncoder, AccessPassQrEncoder>();
         services.AddSingleton<IAccessPassTokenGenerator, AccessPassTokenGenerator>();
         services.AddSingleton<IEmployeePortalCredentialWriter, FileEmployeePortalCredentialWriter>();

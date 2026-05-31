@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Tansu.Application.Auth;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Domain.Enums;
@@ -8,12 +9,15 @@ namespace Tansu.Application.Approvals.Queries;
 
 public sealed record GetInboxQuery : IRequest<IReadOnlyList<InboxItemDto>>;
 
-public sealed class GetInboxHandler(ITansuDbContext db, ICurrentUser currentUser)
-    : IRequestHandler<GetInboxQuery, IReadOnlyList<InboxItemDto>>
+public sealed class GetInboxHandler(
+    ITansuDbContext db,
+    ICurrentUser currentUser,
+    ITansuAccessService accessService) : IRequestHandler<GetInboxQuery, IReadOnlyList<InboxItemDto>>
 {
     public async Task<IReadOnlyList<InboxItemDto>> Handle(GetInboxQuery req, CancellationToken ct)
     {
         var userId = currentUser.UserId ?? throw new UnauthorizedException();
+        var access = await accessService.GetAccessAsync(ct);
 
         var pending = await db.ApprovalSheet.AsNoTracking()
             .Where(a => a.ApproverUserId == userId && a.Status == ApprovalStatus.Pending)
@@ -56,6 +60,9 @@ public sealed class GetInboxHandler(ITansuDbContext db, ICurrentUser currentUser
                 .Include(e => e.Project)
                 .FirstAsync(e => e.Id == mine.EmployeeId, ct);
 
+            if (!IsEmployeeVisible(access, employee.SubcontractorId, employee.ProjectOid))
+                continue;
+
             string? batchTitle = null;
             Guid? batchId = mine.BatchId;
             var submittedAt = mine.CreatedAt;
@@ -76,5 +83,14 @@ public sealed class GetInboxHandler(ITansuDbContext db, ICurrentUser currentUser
         return currentSteps
             .OrderByDescending(x => x.SubmittedAt)
             .ToList();
+    }
+
+    private static bool IsEmployeeVisible(TansuAccessContext access, Guid subcontractorId, Guid projectOid)
+    {
+        if (access.VisibleSubcontractorIds is { } subs && !subs.Contains(subcontractorId))
+            return false;
+        if (access.VisibleProjectOids is { } projects && !projects.Contains(projectOid))
+            return false;
+        return true;
     }
 }

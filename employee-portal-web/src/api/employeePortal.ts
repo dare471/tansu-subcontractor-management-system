@@ -33,6 +33,8 @@ export type EmployeePortalProfile = {
   projectName: string | null;
   approvalStatus: string | null;
   hasPhoto: boolean;
+  photoReviewStatus: string | null;
+  photoReviewReason: string | null;
   accessPassIssuedAt: string | null;
 };
 
@@ -110,6 +112,7 @@ export type EmployeePpeSummary = {
 
 export type PhotoUploadResult = {
   photoPath: string;
+  status: string;
   message: string;
 };
 

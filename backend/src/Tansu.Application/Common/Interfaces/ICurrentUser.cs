@@ -9,4 +9,7 @@ public interface ICurrentUser
     Guid? SubcontractorId { get; }
     Guid? EmployeeId { get; }
     bool MustChangePassword { get; }
+    bool IsSuperUser { get; }
+    string? ApproverRole { get; }
+    string? TansuRole { get; }
 }
