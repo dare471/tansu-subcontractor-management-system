@@ -68,17 +68,33 @@ public static class DemoTansuRolesSeeder
         if (oidManager.User is not null)
         {
             var montazh = await ctx.Subcontractors.FirstOrDefaultAsync(s => s.Bin == DemoSeedData.SubMontazhBin);
-            if (montazh is not null && montazh.RegisteredByUserId != oidManager.User.Id)
+            if (montazh is not null)
             {
-                montazh.RegisteredByUserId = oidManager.User.Id;
-                changed = true;
+                if (montazh.RegisteredByUserId != oidManager.User.Id)
+                {
+                    montazh.RegisteredByUserId = oidManager.User.Id;
+                    changed = true;
+                }
+                if (montazh.ManagerUserId != oidManager.User.Id)
+                {
+                    montazh.ManagerUserId = oidManager.User.Id;
+                    changed = true;
+                }
             }
 
             var energo = await ctx.Subcontractors.FirstOrDefaultAsync(s => s.Bin == DemoSeedData.SubEnergoBin);
-            if (energo is not null && energo.RegisteredByUserId != oidManager.User.Id)
+            if (energo is not null)
             {
-                energo.RegisteredByUserId = oidManager.User.Id;
-                changed = true;
+                if (energo.RegisteredByUserId != oidManager.User.Id)
+                {
+                    energo.RegisteredByUserId = oidManager.User.Id;
+                    changed = true;
+                }
+                if (energo.ManagerUserId != oidManager.User.Id)
+                {
+                    energo.ManagerUserId = oidManager.User.Id;
+                    changed = true;
+                }
             }
         }
 

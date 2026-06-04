@@ -41,14 +41,20 @@ const firstName = computed(() => {
 });
 
 async function loadTansu() {
-  const [subs, projects, users] = await Promise.all([
-    subcontractorsApi.list().catch(() => []),
-    projectsApi.list().catch(() => []),
-    usersApi.list().catch(() => [])
-  ]);
-  subsCount.value = subs.length;
-  projectsCount.value = projects.length;
-  usersCount.value = users.length;
+  const tasks: Promise<void>[] = [];
+  if (auth.canViewSubcontractors) {
+    tasks.push(subcontractorsApi.list().then((s) => { subsCount.value = s.length; }).catch(() => {}));
+  }
+  if (auth.canViewProjects) {
+    tasks.push(projectsApi.list().then((p) => { projectsCount.value = p.length; }).catch(() => {}));
+  }
+  if (auth.canManageUsers) {
+    tasks.push(usersApi.list().then((u) => { usersCount.value = u.length; }).catch(() => {}));
+  }
+  if (auth.canApproveEmployees) {
+    tasks.push(loadInbox());
+  }
+  await Promise.all(tasks);
 }
 
 async function loadSubcontractor() {
@@ -68,17 +74,23 @@ onMounted(async () => {
   try {
     if (auth.isTansu) {
       await loadTansu();
-      await loadInbox();
     }
     if (auth.isSubcontractor) await loadSubcontractor();
   } finally { loading.value = false; }
 });
 
 const tansuQuickActions = [
-  { label: 'Новый субподрядчик', icon: PeopleOutline, to: 'subcontractors' },
-  { label: 'Новый пользователь', icon: PersonCircleOutline, to: 'users' },
-  { label: 'Матрица согласования', icon: GitNetworkOutline, to: 'matrix' },
-  { label: 'Зарегистрировать проект', icon: BusinessOutline, to: 'projects' }
+  { label: 'Новый субподрядчик', icon: PeopleOutline, to: 'subcontractors', permission: 'canRegisterSubcontractors' as const },
+  {
+    label: 'Новый пользователь',
+    icon: PersonCircleOutline,
+    to: 'users',
+    permissionAny: ['canManageTansuUsers', 'canManageSubcontractorUsers'] as const
+  },
+  { label: 'Матрица согласования', icon: GitNetworkOutline, to: 'matrix', permission: 'canManageApprovalMatrix' as const },
+  { label: 'Зарегистрировать проект', icon: BusinessOutline, to: 'projects', permission: 'canManageProjects' as const },
+  { label: 'Согласование', icon: MailUnreadOutline, to: 'approvals-inbox', permission: 'canApproveEmployees' as const },
+  { label: 'Журнал посещений', icon: BusinessOutline, to: 'site-visit-journal', permission: 'canViewVisitJournal' as const }
 ];
 
 const subQuickActions = [
@@ -88,7 +100,19 @@ const subQuickActions = [
   { label: 'Новая заявка', icon: DocumentTextOutline, to: 'document-requests' }
 ];
 
-const quickActions = computed(() => auth.isTansu ? tansuQuickActions : subQuickActions);
+const quickActions = computed(() => {
+  if (auth.isSubcontractor) return subQuickActions;
+  return tansuQuickActions.filter((a) => {
+    if (auth.permissions.isGlobalAdmin) return true;
+    if ('permissionAny' in a && a.permissionAny?.length) {
+      return a.permissionAny.some((p) => auth.permissions[p]);
+    }
+    if ('permission' in a && a.permission) {
+      return !!auth.permissions[a.permission];
+    }
+    return true;
+  });
+});
 
 function statusTag(status: string | null) {
   if (!status) return h(NTag, {}, () => 'Черновик');
@@ -120,21 +144,21 @@ function statusTag(status: string | null) {
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px">
         <template v-if="auth.isTansu">
-          <div class="t-stat t-stat--orange">
+          <div v-if="auth.canViewSubcontractors" class="t-stat t-stat--orange">
             <div class="t-stat__icon"><NIcon :component="PeopleOutline" size="24" /></div>
             <div>
               <div class="t-stat__title">Субподрядчиков</div>
               <div class="t-stat__value">{{ subsCount }}</div>
             </div>
           </div>
-          <div class="t-stat t-stat--blue">
+          <div v-if="auth.canViewProjects" class="t-stat t-stat--blue">
             <div class="t-stat__icon"><NIcon :component="BusinessOutline" size="24" /></div>
             <div>
               <div class="t-stat__title">Проектов</div>
               <div class="t-stat__value">{{ projectsCount }}</div>
             </div>
           </div>
-          <div class="t-stat t-stat--purple">
+          <div v-if="auth.canManageUsers" class="t-stat t-stat--purple">
             <div class="t-stat__icon"><NIcon :component="PersonCircleOutline" size="24" /></div>
             <div>
               <div class="t-stat__title">Пользователей</div>
@@ -174,7 +198,7 @@ function statusTag(status: string | null) {
           </div>
         </template>
 
-        <div v-if="auth.isTansu" class="t-stat t-stat--slate">
+        <div v-if="auth.isTansu && auth.canApproveEmployees" class="t-stat t-stat--slate">
           <div class="t-stat__icon"><NIcon :component="MailUnreadOutline" size="24" /></div>
           <div>
             <div class="t-stat__title">Ждут вашего решения</div>
@@ -191,7 +215,7 @@ function statusTag(status: string | null) {
           alignItems: 'flex-start'
         }"
       >
-        <div v-if="auth.isTansu" class="t-card">
+        <div v-if="auth.isTansu && auth.canApproveEmployees" class="t-card">
           <h3 class="t-section-title">Входящие согласования</h3>
           <NEmpty v-if="!inbox.length" description="Нет записей, ожидающих решения" />
           <div v-else style="display:flex;flex-direction:column;gap:10px">

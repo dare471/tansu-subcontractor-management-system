@@ -18,9 +18,15 @@ export type TansuPermissions = {
   canBlockEmployees: boolean;
   canViewVisitJournal: boolean;
   canManageTansuUsers: boolean;
+  canManageSubcontractorUsers: boolean;
+  canReassignSubcontractorManager: boolean;
   canManageSubordinates: boolean;
   canViewEmployees: boolean;
   canUploadDocuments: boolean;
+  canViewProjects: boolean;
+  canManageProjects: boolean;
+  canViewSubcontractors: boolean;
+  canReviewPhotos: boolean;
   isReadOnlyMonitoring: boolean;
   isGlobalAdmin: boolean;
 };

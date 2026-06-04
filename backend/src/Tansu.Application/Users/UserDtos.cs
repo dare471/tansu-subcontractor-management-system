@@ -11,6 +11,7 @@ public sealed record UserDto(
     Guid? EmployeeId,
     string? ApproverRole,
     string? TansuRole,
+    string? EmployerCompany,
     Guid? ManagerUserId,
     IReadOnlyList<Guid> ProjectOids,
     IReadOnlyList<string> ProjectNames,
@@ -43,6 +44,7 @@ public sealed record CreateUserRequest(
     Guid? SubcontractorId,
     string? ApproverRole,
     string? TansuRole,
+    string? EmployerCompany,
     Guid? ManagerUserId,
     IReadOnlyList<Guid>? ProjectOids,
     IReadOnlyList<Guid>? SubcontractorIds);
@@ -54,6 +56,7 @@ public sealed record UpdateUserRequest(
     string? StatusComment,
     string? ApproverRole,
     string? TansuRole,
+    string? EmployerCompany,
     Guid? ManagerUserId,
     IReadOnlyList<Guid>? ProjectOids,
     IReadOnlyList<Guid>? SubcontractorIds);

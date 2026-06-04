@@ -39,7 +39,8 @@ const editSubActivityType = ref('');
 const savingSub = ref(false);
 
 const canEdit = computed(() =>
-  auth.permissions.isGlobalAdmin || auth.permissions.canRegisterSubcontractors);
+  !auth.isReadOnly &&
+  (auth.permissions.isGlobalAdmin || auth.permissions.canManageProjects));
 
 const editForm = ref({
   name: '',

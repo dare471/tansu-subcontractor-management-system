@@ -20,6 +20,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         e.Property(x => x.EmployeeId).HasColumnName("employee_id");
         e.Property(x => x.ApproverRole).HasColumnName("approver_role").HasMaxLength(32);
         e.Property(x => x.TansuRole).HasColumnName("tansu_role").HasMaxLength(32);
+        e.Property(x => x.EmployerCompany).HasColumnName("employer_company").HasMaxLength(64);
         e.Property(x => x.ManagerUserId).HasColumnName("manager_user_id");
         e.Property(x => x.MustChangePassword).HasColumnName("must_change_password");
         e.Property(x => x.IsActive).HasColumnName("is_active");

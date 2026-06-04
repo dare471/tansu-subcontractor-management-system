@@ -18,6 +18,7 @@ public sealed record UpdateUserCommand(
     string? StatusComment,
     string? ApproverRole,
     string? TansuRole,
+    string? EmployerCompany,
     Guid? ManagerUserId,
     IReadOnlyList<Guid>? ProjectOids,
     IReadOnlyList<Guid>? SubcontractorIds) : IRequest<UserDto>;
@@ -39,8 +40,6 @@ public sealed class UpdateUserHandler(
     public async Task<UserDto> Handle(UpdateUserCommand req, CancellationToken ct)
     {
         var access = await accessService.GetAccessAsync(ct);
-        accessService.EnsurePermission(
-            access, p => p.CanManageTansuUsers, "Управление пользователями доступно только глобальному администратору.");
 
         var u = await db.Users
             .Include(x => x.Subcontractor)
@@ -49,8 +48,17 @@ public sealed class UpdateUserHandler(
             .FirstOrDefaultAsync(x => x.Id == req.Id, ct)
             ?? throw new NotFoundException("User", req.Id);
 
-        var wasActive = u.IsActive;
+        UserManagementAccess.EnsureManageUser(access, u, currentUser.UserId);
 
+        if (u.UserType == UserType.Subcontractor && access.Permissions.CanManageSubcontractorUsers &&
+            !access.Permissions.CanManageTansuUsers && !access.Permissions.IsGlobalAdmin)
+        {
+            var managerId = currentUser.UserId ?? throw new UnauthorizedException();
+            if (u.SubcontractorId is { } sid)
+                await UserManagementAccess.EnsureSubcontractorOwnedByManagerAsync(db, sid, managerId, ct);
+        }
+
+        var wasActive = u.IsActive;
         u.FullName = req.FullName.Trim();
         u.Position = req.Position.Trim();
         u.IsActive = req.IsActive;
@@ -78,7 +86,8 @@ public sealed class UpdateUserHandler(
             });
         }
 
-        if (u.UserType == UserType.Tansu)
+        if (u.UserType == UserType.Tansu &&
+            (access.Permissions.CanManageTansuUsers || access.Permissions.IsGlobalAdmin))
         {
             if (req.ApproverRole is not null && !ApproverRole.IsValid(req.ApproverRole))
                 throw new ValidationFailedException("Недопустимая роль согласующего.");
@@ -86,7 +95,15 @@ public sealed class UpdateUserHandler(
 
             if (req.TansuRole is not null && !TansuRole.IsValid(req.TansuRole))
                 throw new ValidationFailedException("Недопустимая роль ТАНСУ.");
-            u.TansuRole = string.IsNullOrWhiteSpace(req.TansuRole) ? null : req.TansuRole;
+            if (!string.IsNullOrWhiteSpace(req.TansuRole))
+                u.TansuRole = req.TansuRole;
+
+            if (req.EmployerCompany is not null)
+            {
+                if (!TansuEmployerCompany.IsValid(req.EmployerCompany))
+                    throw new ValidationFailedException("Недопустимая компания.");
+                u.EmployerCompany = req.EmployerCompany;
+            }
 
             if (req.ManagerUserId is { } managerId)
             {
@@ -94,13 +111,8 @@ public sealed class UpdateUserHandler(
                     throw new ValidationFailedException("Пользователь не может быть своим руководителем.");
                 if (!await db.Users.AnyAsync(x => x.Id == managerId && x.UserType == UserType.Tansu, ct))
                     throw new NotFoundException("User", managerId);
+                u.ManagerUserId = req.ManagerUserId;
             }
-            u.ManagerUserId = req.ManagerUserId;
-
-            if (req.ProjectOids is not null)
-                await UserAssignmentSync.SyncProjectsAsync(db, u, req.ProjectOids, ct);
-            if (req.SubcontractorIds is not null)
-                await UserAssignmentSync.SyncSubcontractorsAsync(db, u, req.SubcontractorIds, ct);
         }
 
         await db.SaveChangesAsync(ct);
@@ -144,60 +156,5 @@ internal static class UserBlockReasonLookup
             .ToDictionary(
                 g => g.Key,
                 g => g.First().ActionType == EmployeeBlockActionType.Block ? g.First().Reason : null);
-    }
-}
-
-internal static class UserAssignmentSync
-{
-    public static async Task SyncProjectsAsync(
-        ITansuDbContext db,
-        Domain.Entities.User user,
-        IReadOnlyList<Guid> projectOids,
-        CancellationToken ct)
-    {
-        var desired = projectOids.Distinct().ToHashSet();
-        var existing = user.ProjectAssignments.ToList();
-
-        foreach (var row in existing.Where(a => !desired.Contains(a.ProjectOid)))
-            db.UserProjectAssignments.Remove(row);
-
-        var current = existing.Select(a => a.ProjectOid).ToHashSet();
-        foreach (var oid in desired.Where(id => !current.Contains(id)))
-        {
-            if (!await db.ProjectRefs.AnyAsync(p => p.ProjectOid == oid, ct))
-                throw new NotFoundException("Project", oid);
-
-            db.UserProjectAssignments.Add(new UserProjectAssignment
-            {
-                UserId = user.Id,
-                ProjectOid = oid
-            });
-        }
-    }
-
-    public static async Task SyncSubcontractorsAsync(
-        ITansuDbContext db,
-        Domain.Entities.User user,
-        IReadOnlyList<Guid> subcontractorIds,
-        CancellationToken ct)
-    {
-        var desired = subcontractorIds.Distinct().ToHashSet();
-        var existing = user.SubcontractorAssignments.ToList();
-
-        foreach (var row in existing.Where(a => !desired.Contains(a.SubcontractorId)))
-            db.UserSubcontractorAssignments.Remove(row);
-
-        var current = existing.Select(a => a.SubcontractorId).ToHashSet();
-        foreach (var sid in desired.Where(id => !current.Contains(id)))
-        {
-            if (!await db.Subcontractors.AnyAsync(s => s.Id == sid, ct))
-                throw new NotFoundException("Subcontractor", sid);
-
-            db.UserSubcontractorAssignments.Add(new UserSubcontractorAssignment
-            {
-                UserId = user.Id,
-                SubcontractorId = sid
-            });
-        }
     }
 }

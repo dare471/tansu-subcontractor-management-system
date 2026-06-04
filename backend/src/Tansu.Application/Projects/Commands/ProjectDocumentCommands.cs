@@ -30,8 +30,9 @@ public sealed class UploadProjectDocumentHandler(
 
         var access = await accessService.GetAccessAsync(ct);
         accessService.EnsurePermission(
-            access, p => p.CanRegisterSubcontractors || p.IsGlobalAdmin,
+            access, p => p.CanManageProjects || p.IsGlobalAdmin,
             "Нет прав на загрузку документов проекта.");
+        accessService.EnsureCanModify(access);
 
         if (access.VisibleProjectOids is { } projects && !projects.Contains(req.ProjectOid))
             throw new ForbiddenException("Проект вне вашей области видимости.");
@@ -109,8 +110,9 @@ public sealed class DeleteProjectDocumentHandler(
 
         var access = await accessService.GetAccessAsync(ct);
         accessService.EnsurePermission(
-            access, p => p.CanRegisterSubcontractors || p.IsGlobalAdmin,
+            access, p => p.CanManageProjects || p.IsGlobalAdmin,
             "Нет прав на удаление документов проекта.");
+        accessService.EnsureCanModify(access);
 
         var doc = await db.ProjectDocuments
             .FirstOrDefaultAsync(d => d.Id == req.DocumentId && d.ProjectOid == req.ProjectOid, ct)

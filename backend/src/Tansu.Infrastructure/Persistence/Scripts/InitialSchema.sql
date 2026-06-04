@@ -377,3 +377,28 @@ CREATE TABLE IF NOT EXISTS subcontract.user_block_records (
 
 CREATE INDEX IF NOT EXISTS ix_user_block_records_user
     ON subcontract.user_block_records (user_id, created_at DESC);
+
+ALTER TABLE subcontract.subcontractors ADD COLUMN IF NOT EXISTS manager_user_id uuid
+    REFERENCES subcontract.users(id) ON DELETE SET NULL;
+
+UPDATE subcontract.subcontractors
+SET manager_user_id = registered_by_user_id
+WHERE manager_user_id IS NULL AND registered_by_user_id IS NOT NULL;
+
+ALTER TABLE subcontract.users ADD COLUMN IF NOT EXISTS employer_company varchar(64);
+
+CREATE TABLE IF NOT EXISTS subcontract.subcontractor_documents (
+    id                   uuid PRIMARY KEY,
+    subcontractor_id   uuid NOT NULL REFERENCES subcontract.subcontractors(id) ON DELETE CASCADE,
+    name                 varchar(500) NOT NULL,
+    document_type        varchar(32) NOT NULL,
+    file_path            varchar(1024) NOT NULL,
+    content_type         varchar(128),
+    uploaded_at          timestamptz NOT NULL DEFAULT now(),
+    uploaded_by_user_id  uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE RESTRICT,
+    CONSTRAINT ck_subcontractor_document_type CHECK (
+        document_type IN ('contract', 'license', 'insurance', 'charter', 'other'))
+);
+
+CREATE INDEX IF NOT EXISTS ix_subcontractor_documents_sub
+    ON subcontract.subcontractor_documents (subcontractor_id, uploaded_at DESC);

@@ -21,6 +21,7 @@ type NavItem = {
   icon: any;
   roles?: ('TANSU' | 'Subcontractor')[];
   permission?: keyof TansuPermissions;
+  permissionAny?: (keyof TansuPermissions)[];
 };
 
 const allItems: NavItem[] = [
@@ -30,15 +31,15 @@ const allItems: NavItem[] = [
     label: 'Субподрядчики',
     icon: PeopleOutline,
     roles: ['TANSU'],
-    permission: 'canViewEmployees'
+    permission: 'canViewSubcontractors'
   },
-  { name: 'projects', label: 'Проекты', icon: BusinessOutline, roles: ['TANSU'] },
+  { name: 'projects', label: 'Проекты', icon: BusinessOutline, roles: ['TANSU'], permission: 'canViewProjects' },
   {
     name: 'users',
     label: 'Пользователи',
     icon: PersonCircleOutline,
     roles: ['TANSU'],
-    permission: 'canManageTansuUsers'
+    permissionAny: ['canManageTansuUsers', 'canManageSubcontractorUsers']
   },
   {
     name: 'tansu-employees',
@@ -79,7 +80,7 @@ const allItems: NavItem[] = [
     roles: ['TANSU'],
     permission: 'canApproveEmployees'
   },
-  { name: 'photo-reviews-inbox', label: 'Проверка фото', icon: IdCardOutline, roles: ['TANSU'] },
+  { name: 'photo-reviews-inbox', label: 'Проверка фото', icon: IdCardOutline, roles: ['TANSU'], permission: 'canReviewPhotos' },
   {
     name: 'document-requests-inbox',
     label: 'Согласование заявок',
@@ -93,6 +94,10 @@ const items = computed(() =>
   allItems.filter((i) => {
     if (i.roles && (!auth.user || !i.roles.includes(auth.user.userType))) return false;
     if (i.permission && !auth.permissions[i.permission] && !auth.permissions.isGlobalAdmin) return false;
+    if (i.permissionAny?.length) {
+      const ok = i.permissionAny.some((p) => auth.permissions[p]) || auth.permissions.isGlobalAdmin;
+      if (!ok) return false;
+    }
     return true;
   })
 );
@@ -124,13 +129,13 @@ const userInitials = computed(() => {
 });
 
 const roleLabels: Record<string, string> = {
-  oid_manager: 'ОИД менеджер',
-  oid_director: 'ОИД начальник',
-  sb_project: 'СБ на проекте',
-  sb_chief: 'СБ начальник',
-  safety_project: 'БиОТ/ТБ на проекте',
-  safety_chief: 'БиОТ начальник',
-  project_manager: 'Руководитель проекта',
+  oid_manager: 'Менеджер',
+  oid_director: 'Администратор',
+  sb_project: 'Согласующий (СБ)',
+  sb_chief: 'Согласующий (СБ нач.)',
+  safety_project: 'Согласующий (БиОТ)',
+  safety_chief: 'Согласующий (БиОТ нач.)',
+  project_manager: 'Согласующий (РП)',
   global_admin: 'Глобальный администратор'
 };
 

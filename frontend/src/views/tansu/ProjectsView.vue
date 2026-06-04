@@ -4,8 +4,10 @@ import { useRouter } from 'vue-router';
 import { NCard, NSpace, NInput, NButton, NDataTable, NModal, NForm, NFormItem, useMessage } from 'naive-ui';
 import { projectsApi, type Project } from '@/api/projects';
 import { toApiError } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
+const auth = useAuthStore();
 const msg = useMessage();
 const items = ref<Project[]>([]);
 const loading = ref(false);
@@ -58,7 +60,7 @@ onMounted(load);
       <NSpace>
         <NInput v-model:value="search" placeholder="Поиск по названию" clearable @keyup.enter="load" style="width:300px" />
         <NButton @click="load">Найти</NButton>
-        <NButton type="primary" @click="showForm = true">+ Зарегистрировать</NButton>
+        <NButton v-if="auth.canManageProjects" type="primary" @click="showForm = true">+ Зарегистрировать</NButton>
       </NSpace>
       <div class="t-table-wrap">
         <NDataTable

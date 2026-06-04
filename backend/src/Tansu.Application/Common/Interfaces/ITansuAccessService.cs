@@ -8,4 +8,5 @@ public interface ITansuAccessService
     Task EnsureSubcontractorVisibleAsync(Guid subcontractorId, CancellationToken ct);
     Task EnsureEmployeeVisibleAsync(Guid employeeId, CancellationToken ct);
     void EnsurePermission(TansuAccessContext access, Func<TansuPermissionsDto, bool> check, string message);
+    void EnsureCanModify(TansuAccessContext access);
 }

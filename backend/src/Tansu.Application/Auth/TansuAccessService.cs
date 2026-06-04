@@ -92,6 +92,12 @@ public sealed class TansuAccessService(ITansuDbContext db, ICurrentUser currentU
             throw new ForbiddenException(message);
     }
 
+    public void EnsureCanModify(TansuAccessContext access)
+    {
+        if (access.Permissions.IsReadOnlyMonitoring && !access.Permissions.IsGlobalAdmin)
+            throw new ForbiddenException("Роль предназначена только для просмотра — изменения запрещены.");
+    }
+
     private static string? ResolveEffectiveRole(Domain.Entities.User user)
     {
         if (user.IsSuperUser)
@@ -109,43 +115,8 @@ public sealed class TansuAccessService(ITansuDbContext db, ICurrentUser currentU
         };
     }
 
-    private static TansuPermissionsDto BuildPermissions(string? role, bool isSuperUser)
-    {
-        if (isSuperUser || role == TansuRole.GlobalAdmin)
-        {
-            return new TansuPermissionsDto(
-                true, true, true, true, true, true, true, true, true, false, true);
-        }
-
-        return role switch
-        {
-            TansuRole.OidManager => new(
-                CanRegisterSubcontractors: true,
-                CanManageApprovalMatrix: true,
-                CanApproveEmployees: true,
-                CanBlockEmployees: true,
-                CanViewVisitJournal: false,
-                CanManageTansuUsers: false,
-                CanManageSubordinates: false,
-                CanViewEmployees: true,
-                CanUploadDocuments: true,
-                IsReadOnlyMonitoring: false,
-                IsGlobalAdmin: false),
-            TansuRole.OidDirector => new(
-                false, false, true, true, false, false, false, true, true, false, false),
-            TansuRole.SbProject => new(
-                false, false, false, true, false, false, false, true, false, false, false),
-            TansuRole.SbChief => new(
-                false, false, false, true, true, false, false, true, false, false, false),
-            TansuRole.SafetyProject => new(
-                false, false, false, true, false, false, false, true, false, false, false),
-            TansuRole.SafetyChief => new(
-                false, false, false, true, true, false, false, true, false, false, false),
-            TansuRole.ProjectManager => new(
-                false, false, false, true, false, false, false, true, false, true, false),
-            _ => DenyAll()
-        };
-    }
+    private static TansuPermissionsDto BuildPermissions(string? role, bool isSuperUser) =>
+        TansuRoleMatrix.Resolve(role, isSuperUser);
 
     private async Task<(IReadOnlySet<Guid>? SubIds, IReadOnlySet<Guid>? ProjectOids, bool IncludeInactive)>
         ResolveScopeAsync(
@@ -334,8 +305,7 @@ public sealed class TansuAccessService(ITansuDbContext db, ICurrentUser currentU
     }
 
     private static TansuPermissionsDto SubcontractorPermissions() =>
-        new(false, false, false, false, false, false, false, true, true, false, false);
+        TansuRoleMatrix.SubcontractorPortal();
 
-    private static TansuPermissionsDto DenyAll() =>
-        new(false, false, false, false, false, false, false, false, false, false, false);
+    private static TansuPermissionsDto DenyAll() => TansuRoleMatrix.DenyAll();
 }

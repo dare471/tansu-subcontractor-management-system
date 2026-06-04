@@ -6,6 +6,7 @@ namespace Tansu.Application.Common.Interfaces;
 public interface ITansuDbContext
 {
     DbSet<Subcontractor> Subcontractors { get; }
+    DbSet<SubcontractorDocument> SubcontractorDocuments { get; }
     DbSet<ProjectRef> ProjectRefs { get; }
     DbSet<ProjectDocument> ProjectDocuments { get; }
     DbSet<ProjectSubcontractor> ProjectSubcontractors { get; }

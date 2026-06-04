@@ -16,6 +16,7 @@ public class User
 
     public string? ApproverRole { get; set; }
     public string? TansuRole { get; set; }
+    public string? EmployerCompany { get; set; }
     public Guid? ManagerUserId { get; set; }
 
     public bool MustChangePassword { get; set; }

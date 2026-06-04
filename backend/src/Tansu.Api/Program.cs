@@ -47,6 +47,7 @@ await using (var scope = app.Services.CreateAsyncScope())
         await DemoEmployeePortalSeeder.EnsureAsync(scope.ServiceProvider);
         await DemoTansuRolesSeeder.EnsureAsync(scope.ServiceProvider);
         await DemoProjectDetailsSeeder.EnsureAsync(scope.ServiceProvider);
+        await DemoUiDataSeeder.EnsureAsync(scope.ServiceProvider);
     }
 }
 
@@ -63,6 +64,7 @@ app.MapHealthChecks("/health");
 app.MapAuthEndpoints(app.Environment);
 app.MapSubcontractorEndpoints();
 app.MapUserEndpoints();
+app.MapZupEndpoints();
 app.MapProjectEndpoints();
 app.MapMatrixEndpoints();
 app.MapEmployeeEndpoints();

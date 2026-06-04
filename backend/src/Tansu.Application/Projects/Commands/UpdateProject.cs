@@ -34,8 +34,9 @@ public sealed class UpdateProjectHandler(
 
         var access = await accessService.GetAccessAsync(ct);
         accessService.EnsurePermission(
-            access, p => p.CanRegisterSubcontractors || p.IsGlobalAdmin,
+            access, p => p.CanManageProjects || p.IsGlobalAdmin,
             "Нет прав на редактирование проекта.");
+        accessService.EnsureCanModify(access);
 
         if (access.VisibleProjectOids is { } projects && !projects.Contains(req.ProjectOid))
             throw new ForbiddenException("Проект вне вашей области видимости.");

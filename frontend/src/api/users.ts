@@ -13,6 +13,7 @@ export type User = {
   employeeId: string | null;
   approverRole: string | null;
   tansuRole: string | null;
+  employerCompany: string | null;
   managerUserId: string | null;
   projectOids: string[];
   projectNames: string[];
@@ -49,15 +50,30 @@ export type UpdateUserPayload = {
   statusComment?: string | null;
   approverRole?: string | null;
   tansuRole?: string | null;
+  employerCompany?: string | null;
   managerUserId?: string | null;
-  projectOids?: string[];
-  subcontractorIds?: string[];
 };
 
 export const USER_TYPE_LABELS: Record<UserType, string> = {
   TANSU: 'ТАНСУ',
-  Subcontractor: 'Админ субподрядчика',
+  Subcontractor: 'Субподрядчик',
   Employee: 'Сотрудник (ЛК)'
+};
+
+export const TANSU_ROLE_OPTIONS = [
+  { label: 'Менеджер', value: 'oid_manager' },
+  { label: 'Администратор', value: 'oid_director' },
+  { label: 'Согласующий (СБ на проекте)', value: 'sb_project' },
+  { label: 'Согласующий (СБ начальник)', value: 'sb_chief' },
+  { label: 'Согласующий (БиОТ на проекте)', value: 'safety_project' },
+  { label: 'Согласующий (БиОТ начальник)', value: 'safety_chief' },
+  { label: 'Согласующий (руководитель проекта)', value: 'project_manager' },
+  { label: 'Глобальный администратор', value: 'global_admin' }
+];
+
+export const EMPLOYER_COMPANY_LABELS: Record<string, string> = {
+  tansu_construction: 'ТОО TANSU Construction',
+  kazprom_service: 'ТОО KazPromService'
 };
 
 export const usersApi = {
@@ -70,9 +86,7 @@ export const usersApi = {
     userType: 'TANSU' | 'Subcontractor';
     subcontractorId?: string | null;
     tansuRole?: string | null;
-    managerUserId?: string | null;
-    projectOids?: string[];
-    subcontractorIds?: string[];
+    employerCompany?: string | null;
   }) =>
     apiClient.post<CreateUserResponse>('/api/users', payload).then((r) => r.data),
   update: (id: string, payload: UpdateUserPayload) =>
@@ -84,14 +98,3 @@ export const usersApi = {
       .post<{ temporaryPassword: string }>(`/api/users/${id}/reset-password`)
       .then((r) => r.data)
 };
-
-export const TANSU_ROLE_OPTIONS = [
-  { label: 'ОИД менеджер', value: 'oid_manager' },
-  { label: 'ОИД начальник / Ком. директор', value: 'oid_director' },
-  { label: 'СБ на проекте', value: 'sb_project' },
-  { label: 'СБ начальник', value: 'sb_chief' },
-  { label: 'БиОТ/ТБ на проекте', value: 'safety_project' },
-  { label: 'БиОТ начальник', value: 'safety_chief' },
-  { label: 'Руководитель проекта', value: 'project_manager' },
-  { label: 'Глобальный администратор', value: 'global_admin' }
-];

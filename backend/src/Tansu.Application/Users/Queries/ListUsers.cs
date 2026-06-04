@@ -1,8 +1,10 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Tansu.Application.Auth;
+using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Application.Users.Commands;
+using Tansu.Domain.Enums;
 
 namespace Tansu.Application.Users.Queries;
 
@@ -11,15 +13,34 @@ public sealed record ListUsersQuery(string? UserType, Guid? SubcontractorId, str
 
 public sealed class ListUsersHandler(
     ITansuDbContext db,
+    ICurrentUser currentUser,
     ITansuAccessService accessService) : IRequestHandler<ListUsersQuery, IReadOnlyList<UserDto>>
 {
     public async Task<IReadOnlyList<UserDto>> Handle(ListUsersQuery req, CancellationToken ct)
     {
         var access = await accessService.GetAccessAsync(ct);
-        accessService.EnsurePermission(
-            access, p => p.CanManageTansuUsers, "Управление пользователями доступно только глобальному администратору.");
+        UserManagementAccess.EnsureList(access, req.UserType);
 
         var q = db.Users.AsNoTracking().AsQueryable();
+
+        var scopedToManager = !access.Permissions.IsGlobalAdmin &&
+                              !access.Permissions.CanManageTansuUsers &&
+                              access.Permissions.CanManageSubcontractorUsers;
+
+        if (scopedToManager)
+        {
+            var managerId = currentUser.UserId ?? throw new UnauthorizedException();
+            q = q.Where(u =>
+                u.UserType == UserType.Subcontractor &&
+                u.SubcontractorId != null &&
+                db.Subcontractors.Any(s =>
+                    s.Id == u.SubcontractorId && s.RegisteredByUserId == managerId));
+            req = req with { UserType = UserType.Subcontractor };
+        }
+        else if (!access.Permissions.IsGlobalAdmin && !access.Permissions.CanManageTansuUsers)
+        {
+            q = q.Where(u => u.UserType == UserType.Tansu);
+        }
 
         if (!string.IsNullOrWhiteSpace(req.UserType))
             q = q.Where(u => u.UserType == req.UserType);
@@ -58,6 +79,7 @@ internal static class UserMapper
             u.EmployeeId,
             u.ApproverRole,
             u.TansuRole,
+            u.EmployerCompany,
             u.ManagerUserId,
             u.ProjectAssignments.Select(a => a.ProjectOid).ToList(),
             u.ProjectAssignments.Select(a => a.Project?.Name ?? a.ProjectOid.ToString()).ToList(),

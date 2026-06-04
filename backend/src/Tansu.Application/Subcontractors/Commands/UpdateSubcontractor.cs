@@ -1,16 +1,15 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Auth;
+using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
-using Tansu.Application.Employees;
-using Tansu.Domain.Entities;
 using Tansu.Domain.Enums;
 
 namespace Tansu.Application.Subcontractors.Commands;
 
-public sealed record UpdateSubcontractorCommand(Guid Id, string Name, string Bin) : IRequest<SubcontractorDto>;
+public sealed record UpdateSubcontractorCommand(Guid Id, string Name, string Bin, Guid? ManagerUserId)
+    : IRequest<SubcontractorDto>;
 
 public sealed class UpdateSubcontractorValidator : AbstractValidator<UpdateSubcontractorCommand>
 {
@@ -32,9 +31,11 @@ public sealed class UpdateSubcontractorHandler(
         accessService.EnsurePermission(
             access, p => p.CanRegisterSubcontractors || p.IsGlobalAdmin,
             "Нет права редактировать субподрядчиков.");
+        accessService.EnsureCanModify(access);
 
         var entity = await db.Subcontractors
             .Include(x => x.Projects)
+            .Include(x => x.Manager)
             .FirstOrDefaultAsync(x => x.Id == req.Id, ct)
             ?? throw new NotFoundException("Subcontractor", req.Id);
 
@@ -46,41 +47,24 @@ public sealed class UpdateSubcontractorHandler(
 
         entity.Name = req.Name.Trim();
         entity.Bin = req.Bin.Trim();
-        await db.SaveChangesAsync(ct);
 
-        var employeeIds = await db.Employees.AsNoTracking()
-            .Where(e => e.SubcontractorId == entity.Id)
-            .Select(e => e.Id)
-            .ToListAsync(ct);
-
-        var approved = 0;
-        var notApproved = 0;
-
-        if (employeeIds.Count > 0)
+        if (req.ManagerUserId is { } managerId)
         {
-            var sheets = await db.ApprovalSheet.AsNoTracking()
-                .Where(a => employeeIds.Contains(a.EmployeeId))
-                .ToListAsync(ct);
+            accessService.EnsurePermission(
+                access,
+                p => p.CanReassignSubcontractorManager || p.IsGlobalAdmin,
+                "Назначение менеджера доступно администратору или глобальному администратору.");
 
-            var sheetsByEmployee = sheets
-                .GroupBy(s => s.EmployeeId)
-                .ToDictionary(g => g.Key, g => (IReadOnlyList<ApprovalSheetEntry>)g.ToList());
-
-            foreach (var employeeId in employeeIds)
+            if (!await db.Users.AnyAsync(
+                    u => u.Id == managerId && u.UserType == UserType.Tansu && u.IsActive, ct))
             {
-                sheetsByEmployee.TryGetValue(employeeId, out var employeeSheets);
-                employeeSheets ??= Array.Empty<ApprovalSheetEntry>();
-                var status = EmployeeStatusResolver.ResolveFromSheets(employeeSheets);
-
-                if (status == ApprovalStatus.Approved)
-                    approved++;
-                else
-                    notApproved++;
+                throw new NotFoundException("User", managerId);
             }
+
+            entity.ManagerUserId = managerId;
         }
 
-        return new SubcontractorDto(
-            entity.Id, entity.Name, entity.Bin,
-            entity.Projects.Count, approved, notApproved, entity.IsActive, entity.CreatedAt);
+        await db.SaveChangesAsync(ct);
+        return await SubcontractorStatsHelper.ToDtoAsync(db, entity, ct);
     }
 }

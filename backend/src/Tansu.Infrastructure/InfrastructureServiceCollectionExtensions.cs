@@ -12,6 +12,7 @@ using Tansu.Infrastructure.FaceVerify;
 using Tansu.Infrastructure.Hik;
 using Tansu.Infrastructure.Persistence;
 using Tansu.Infrastructure.Storage;
+using Tansu.Infrastructure.Zup;
 
 namespace Tansu.Infrastructure;
 
@@ -38,6 +39,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.Configure<EmployeePortalOptions>(configuration.GetSection(EmployeePortalOptions.SectionName));
         services.Configure<EmployeePhotoReviewOptions>(configuration.GetSection(EmployeePhotoReviewOptions.SectionName));
         services.Configure<FaceVerifyOptions>(configuration.GetSection(FaceVerifyOptions.SectionName));
+        services.Configure<ZupOptions>(configuration.GetSection(ZupOptions.SectionName));
 
         var faceVerifyUrl = configuration[$"{FaceVerifyOptions.SectionName}:BaseUrl"];
         if (!string.IsNullOrWhiteSpace(faceVerifyUrl))
@@ -66,6 +68,13 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IPhotoStorage, LocalPhotoStorage>();
         services.AddSingleton<IEmployeeDocumentStorage, LocalEmployeeDocumentStorage>();
         services.AddSingleton<IProjectDocumentStorage, LocalProjectDocumentStorage>();
+        services.AddSingleton<ISubcontractorDocumentStorage, LocalSubcontractorDocumentStorage>();
+        services.AddHttpClient<IZupEmployeeDirectory, HttpZupEmployeeDirectory>((sp, client) =>
+        {
+            var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ZupOptions>>().Value;
+            client.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
         services.AddSingleton<IHikAccessService, StubHikAccessService>();
         services.AddSingleton<IAccessPassQrEncoder, AccessPassQrEncoder>();
         services.AddSingleton<IAccessPassTokenGenerator, AccessPassTokenGenerator>();

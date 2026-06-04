@@ -1,3 +1,4 @@
+using Tansu.Application.Auth;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Domain.Enums;
@@ -6,10 +7,16 @@ namespace Tansu.Application.EmployeePhotoReviews;
 
 internal static class EmployeePhotoReviewAuthorization
 {
-    public static void EnsureManualReviewer(ICurrentUser currentUser)
+    public static async Task EnsureCanReviewPhotosAsync(
+        ICurrentUser currentUser,
+        ITansuAccessService accessService,
+        CancellationToken ct)
     {
         if (currentUser.UserType != UserType.Tansu)
             throw new ForbiddenException("Ручная проверка фото доступна только сотрудникам ТАНСУ.");
+
+        var access = await accessService.GetAccessAsync(ct);
+        accessService.EnsurePermission(access, p => p.CanReviewPhotos, "Проверка фото недоступна для вашей роли.");
     }
 }
 

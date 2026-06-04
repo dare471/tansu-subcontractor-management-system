@@ -32,6 +32,7 @@ public sealed class CreateSubcontractorHandler(
         var access = await accessService.GetAccessAsync(ct);
         accessService.EnsurePermission(
             access, p => p.CanRegisterSubcontractors, "Регистрация субподрядчиков недоступна для вашей роли.");
+        accessService.EnsureCanModify(access);
 
         if (await db.Subcontractors.AnyAsync(x => x.Bin == req.Bin, ct))
             throw new ConflictException("bin_taken", "Субподрядчик с таким БИН уже существует.");
@@ -43,11 +44,17 @@ public sealed class CreateSubcontractorHandler(
             Name = req.Name.Trim(),
             Bin = req.Bin.Trim(),
             RegisteredByUserId = userId,
+            ManagerUserId = userId,
             IsActive = true
         };
         db.Subcontractors.Add(entity);
         await db.SaveChangesAsync(ct);
 
-        return new SubcontractorDto(entity.Id, entity.Name, entity.Bin, 0, 0, 0, entity.IsActive, entity.CreatedAt);
+        var managerName = await db.Users.AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.FullName)
+            .FirstOrDefaultAsync(ct);
+
+        return SubcontractorMapper.ToDto(entity, 0, 0, 0, managerName);
     }
 }

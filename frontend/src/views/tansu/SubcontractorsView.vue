@@ -5,10 +5,20 @@ import {
   NCard, NSpace, NInput, NButton, NDataTable, NModal, NForm, NFormItem,
   NPopconfirm, NSelect, NEmpty, NTag, useMessage, type DataTableColumns, type SelectOption
 } from 'naive-ui';
-import { subcontractorsApi, type Subcontractor, type ProjectBinding } from '@/api/subcontractors';
+import { apiClient } from '@/api/client';
+import {
+  subcontractorsApi,
+  SUBCONTRACTOR_DOC_TYPES,
+  type Subcontractor,
+  type ProjectBinding,
+  type SubcontractorDocument
+} from '@/api/subcontractors';
+import { usersApi } from '@/api/users';
 import { projectsApi, type Project } from '@/api/projects';
 import { toApiError } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
 
+const auth = useAuthStore();
 const msg = useMessage();
 const router = useRouter();
 const items = ref<Subcontractor[]>([]);
@@ -17,7 +27,15 @@ const search = ref('');
 
 const showForm = ref(false);
 const editing = ref<Subcontractor | null>(null);
-const form = ref({ name: '', bin: '' });
+const form = ref({ name: '', bin: '', managerUserId: null as string | null });
+const managerOptions = ref<SelectOption[]>([]);
+
+const showDocs = ref(false);
+const docsTarget = ref<Subcontractor | null>(null);
+const docs = ref<SubcontractorDocument[]>([]);
+const docsLoading = ref(false);
+const docForm = ref({ name: '', documentType: 'contract' });
+const docUploading = ref(false);
 
 const showBindings = ref(false);
 const bindTarget = ref<Subcontractor | null>(null);
@@ -35,22 +53,36 @@ async function load() {
   } catch (e) { msg.error(toApiError(e).detail); } finally { loading.value = false; }
 }
 
+async function loadManagers() {
+  if (!auth.permissions.canReassignSubcontractorManager && !auth.permissions.isGlobalAdmin) return;
+  try {
+    const users = await usersApi.list({ userType: 'TANSU' });
+    managerOptions.value = users
+      .filter((u) => u.isActive)
+      .map((u) => ({ label: u.fullName, value: u.id }));
+  } catch { managerOptions.value = []; }
+}
+
 function openCreate() {
   editing.value = null;
-  form.value = { name: '', bin: '' };
+  form.value = { name: '', bin: '', managerUserId: null };
   showForm.value = true;
 }
 
 function openEdit(row: Subcontractor) {
   editing.value = row;
-  form.value = { name: row.name, bin: row.bin };
+  form.value = { name: row.name, bin: row.bin, managerUserId: row.managerUserId };
   showForm.value = true;
 }
 
 async function save() {
   try {
     if (editing.value)
-      await subcontractorsApi.update(editing.value.id, form.value.name, form.value.bin);
+      await subcontractorsApi.update(editing.value.id, {
+        name: form.value.name,
+        bin: form.value.bin,
+        managerUserId: form.value.managerUserId
+      });
     else
       await subcontractorsApi.create(form.value.name, form.value.bin);
     showForm.value = false;
@@ -133,7 +165,69 @@ async function unbindProject(projectOid: string) {
   } catch (e) { msg.error(toApiError(e).detail); }
 }
 
-const TABLE_SCROLL_X = 1120;
+async function openDocuments(row: Subcontractor) {
+  docsTarget.value = row;
+  showDocs.value = true;
+  docsLoading.value = true;
+  try {
+    docs.value = await subcontractorsApi.documents(row.id);
+  } catch (e) {
+    msg.error(toApiError(e).detail);
+    docs.value = [];
+  } finally {
+    docsLoading.value = false;
+  }
+}
+
+async function uploadDoc() {
+  if (!docsTarget.value || !docForm.value.name.trim()) {
+    msg.warning('Укажите наименование документа');
+    return;
+  }
+  const input = document.getElementById('sub-doc-file') as HTMLInputElement | null;
+  const file = input?.files?.[0];
+  if (!file) {
+    msg.warning('Выберите файл');
+    return;
+  }
+  docUploading.value = true;
+  try {
+    const fd = new FormData();
+    fd.append('name', docForm.value.name.trim());
+    fd.append('documentType', docForm.value.documentType);
+    fd.append('file', file);
+    await subcontractorsApi.uploadDocument(docsTarget.value.id, fd);
+    docs.value = await subcontractorsApi.documents(docsTarget.value.id);
+    docForm.value.name = '';
+    if (input) input.value = '';
+    msg.success('Документ загружен');
+  } catch (e) { msg.error(toApiError(e).detail); }
+  finally { docUploading.value = false; }
+}
+
+async function removeDoc(doc: SubcontractorDocument) {
+  if (!docsTarget.value) return;
+  try {
+    await subcontractorsApi.deleteDocument(docsTarget.value.id, doc.id);
+    docs.value = await subcontractorsApi.documents(docsTarget.value.id);
+    msg.success('Удалено');
+  } catch (e) { msg.error(toApiError(e).detail); }
+}
+
+async function openDocFile(doc: SubcontractorDocument) {
+  if (!docsTarget.value) return;
+  try {
+    const res = await apiClient.get(
+      subcontractorsApi.documentUrl(docsTarget.value.id, doc.id),
+      { responseType: 'blob' }
+    );
+    const url = URL.createObjectURL(res.data);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (e) { msg.error(toApiError(e).detail); }
+}
+
+const TABLE_SCROLL_X = 1280;
 
 const columns: DataTableColumns<Subcontractor> = [
   {
@@ -141,7 +235,12 @@ const columns: DataTableColumns<Subcontractor> = [
     ellipsis: { tooltip: true }
   },
   { title: 'БИН', key: 'bin', width: 160 },
-  { title: 'Проектов', key: 'projectsCount', width: 100 },
+  {
+    title: 'Менеджер', key: 'managerFullName', width: 180,
+    render: (row) => row.managerFullName ?? '—',
+    ellipsis: { tooltip: true }
+  },
+  { title: 'Проектов', key: 'projectsCount', width: 90 },
   {
     title: 'Согласование', key: 'approval', width: 200,
     render: (row) => h(NSpace, { size: 4, wrap: false }, () => [
@@ -150,16 +249,21 @@ const columns: DataTableColumns<Subcontractor> = [
     ])
   },
   {
-    title: 'Действия', key: 'actions', width: 380,
+    title: 'Действия', key: 'actions', width: 440,
     render: (row) => h(NSpace, { size: 'small', wrap: false }, () => [
-      h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => 'Изменить'),
+      auth.canRegisterSubcontractors
+        ? h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => 'Изменить')
+        : null,
+      h(NButton, { size: 'small', onClick: () => openDocuments(row) }, () => 'Документы'),
       h(NButton, { size: 'small', onClick: () => openBindings(row) }, () => 'Проекты'),
-      h(NPopconfirm, {
-        onPositiveClick: () => remove(row)
-      }, {
-        default: () => 'Удалить субподрядчика?',
-        trigger: () => h(NButton, { size: 'small', type: 'error' }, () => 'Удалить')
-      })
+      auth.canRegisterSubcontractors
+        ? h(NPopconfirm, {
+          onPositiveClick: () => remove(row)
+        }, {
+          default: () => 'Удалить субподрядчика?',
+          trigger: () => h(NButton, { size: 'small', type: 'error' }, () => 'Удалить')
+        })
+        : null
     ])
   }
 ];
@@ -184,7 +288,9 @@ const bindingColumns = [
   }
 ];
 
-onMounted(load);
+onMounted(async () => {
+  await Promise.all([load(), loadManagers()]);
+});
 </script>
 
 <template>
@@ -193,7 +299,7 @@ onMounted(load);
       <NSpace>
         <NInput v-model:value="search" placeholder="Поиск по названию или БИН" clearable @keyup.enter="load" style="width:300px" />
         <NButton @click="load">Найти</NButton>
-        <NButton type="primary" @click="openCreate">+ Новый</NButton>
+        <NButton v-if="auth.canRegisterSubcontractors" type="primary" @click="openCreate">+ Новый</NButton>
       </NSpace>
       <div class="t-table-wrap">
         <NDataTable
@@ -215,6 +321,18 @@ onMounted(load);
         </NFormItem>
         <NFormItem label="БИН">
           <NInput v-model:value="form.bin" />
+        </NFormItem>
+        <NFormItem
+          v-if="editing && (auth.permissions.canReassignSubcontractorManager || auth.permissions.isGlobalAdmin)"
+          label="Менеджер"
+        >
+          <NSelect
+            v-model:value="form.managerUserId"
+            :options="managerOptions"
+            filterable
+            clearable
+            placeholder="Ответственный менеджер"
+          />
         </NFormItem>
         <NSpace justify="end">
           <NButton @click="showForm = false">Отмена</NButton>
@@ -241,7 +359,7 @@ onMounted(load);
         </div>
 
         <NSpace v-else vertical :size="12" style="width:100%">
-          <NSpace align="center" style="width:100%">
+          <NSpace v-if="auth.canRegisterSubcontractors" align="center" style="width:100%">
             <NSelect
               v-model:value="selectedProjectOid"
               :options="availableProjectOptions"
@@ -283,6 +401,37 @@ onMounted(load);
             size="small"
           />
         </div>
+      </NSpace>
+    </NModal>
+
+    <NModal
+      v-model:show="showDocs"
+      preset="card"
+      :title="'Документы: ' + (docsTarget?.name ?? '')"
+      style="width:640px"
+    >
+      <NSpace vertical>
+        <NSpace v-if="auth.canRegisterSubcontractors" align="center">
+          <NInput v-model:value="docForm.name" placeholder="Наименование" style="flex:1" />
+          <NSelect v-model:value="docForm.documentType" :options="SUBCONTRACTOR_DOC_TYPES" style="width:200px" />
+          <input id="sub-doc-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx" />
+          <NButton type="primary" :loading="docUploading" @click="uploadDoc">Загрузить</NButton>
+        </NSpace>
+        <NDataTable
+          :columns="[
+            { title: 'Название', key: 'name' },
+            { title: 'Тип', key: 'documentTypeLabel' },
+            { title: 'Дата', key: 'uploadedAt', render: (r: SubcontractorDocument) => new Date(r.uploadedAt).toLocaleString('ru-RU') },
+            { title: '', key: 'a', render: (r: SubcontractorDocument) => h(NSpace, { size: 'small' }, () => [
+              h(NButton, { size: 'small', onClick: () => openDocFile(r) }, () => 'Открыть'),
+              auth.canRegisterSubcontractors ? h(NButton, { size: 'small', type: 'error', onClick: () => removeDoc(r) }, () => 'Удалить') : null
+            ]) }
+          ]"
+          :data="docs"
+          :loading="docsLoading"
+          :row-key="(r: SubcontractorDocument) => r.id"
+          size="small"
+        />
       </NSpace>
     </NModal>
   </NCard>

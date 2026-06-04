@@ -22,6 +22,7 @@ public sealed class GetProjectDetailHandler(
             throw new ForbiddenException("Карточка проекта доступна только сотрудникам ТАНСУ.");
 
         var access = await accessService.GetAccessAsync(ct);
+        accessService.EnsurePermission(access, p => p.CanViewProjects, "Просмотр проекта недоступен для вашей роли.");
         if (access.VisibleProjectOids is { } projects && !projects.Contains(req.ProjectOid))
             throw new ForbiddenException("Проект вне вашей области видимости.");
 

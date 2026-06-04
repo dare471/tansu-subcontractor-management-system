@@ -33,25 +33,28 @@ const routes: RouteRecordRaw[] = [
         path: 'subcontractors',
         name: 'subcontractors',
         component: () => import('@/views/tansu/SubcontractorsView.vue'),
-        meta: { roles: ['TANSU'], permission: 'canViewEmployees' }
+        meta: { roles: ['TANSU'], permission: 'canViewSubcontractors' }
       },
       {
         path: 'projects',
         name: 'projects',
         component: () => import('@/views/tansu/ProjectsView.vue'),
-        meta: { roles: ['TANSU'] }
+        meta: { roles: ['TANSU'], permission: 'canViewProjects' }
       },
       {
         path: 'projects/:projectOid',
         name: 'project-detail',
         component: () => import('@/views/tansu/ProjectDetailView.vue'),
-        meta: { roles: ['TANSU'] }
+        meta: { roles: ['TANSU'], permission: 'canViewProjects' }
       },
       {
         path: 'users',
         name: 'users',
         component: () => import('@/views/tansu/UsersView.vue'),
-        meta: { roles: ['TANSU'], permission: 'canManageTansuUsers' }
+        meta: {
+          roles: ['TANSU'],
+          permissionAny: ['canManageTansuUsers', 'canManageSubcontractorUsers']
+        }
       },
       {
         path: 'matrix',
@@ -110,7 +113,7 @@ const routes: RouteRecordRaw[] = [
         path: 'photo-reviews/inbox',
         name: 'photo-reviews-inbox',
         component: () => import('@/views/tansu/PhotoReviewsInboxView.vue'),
-        meta: { roles: ['TANSU'] }
+        meta: { roles: ['TANSU'], permission: 'canReviewPhotos' }
       },
       {
         path: 'approvals/inbox',
@@ -162,6 +165,12 @@ router.beforeEach(async (to) => {
   const permission = to.meta.permission as keyof typeof auth.permissions | undefined;
   if (permission && !auth.permissions[permission] && !auth.permissions.isGlobalAdmin) {
     return { name: 'home' };
+  }
+
+  const permissionAny = to.meta.permissionAny as (keyof typeof auth.permissions)[] | undefined;
+  if (permissionAny?.length) {
+    const allowed = permissionAny.some((p) => auth.permissions[p]) || auth.permissions.isGlobalAdmin;
+    if (!allowed) return { name: 'home' };
   }
 
   return true;

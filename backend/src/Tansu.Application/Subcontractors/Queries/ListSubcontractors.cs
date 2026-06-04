@@ -2,7 +2,6 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Tansu.Application.Auth;
 using Tansu.Application.Common.Interfaces;
-using Tansu.Application.Employees;
 using Tansu.Domain.Entities;
 using Tansu.Domain.Enums;
 
@@ -23,11 +22,11 @@ public sealed class ListSubcontractorsHandler(
         {
             accessService.EnsurePermission(
                 access,
-                p => p.CanViewEmployees || p.CanRegisterSubcontractors || p.CanApproveEmployees,
+                p => p.CanViewSubcontractors || p.CanRegisterSubcontractors,
                 "Нет доступа к субподрядчикам.");
         }
 
-        var q = db.Subcontractors.AsNoTracking();
+        IQueryable<Subcontractor> q = db.Subcontractors.AsNoTracking().Include(x => x.Manager);
 
         if (access.VisibleSubcontractorIds is { } scopeIds)
             q = q.Where(x => scopeIds.Contains(x.Id));
@@ -45,19 +44,15 @@ public sealed class ListSubcontractorsHandler(
             .OrderBy(x => x.Name)
             .Select(x => new
             {
-                x.Id,
-                x.Name,
-                x.Bin,
-                x.IsActive,
-                ProjectsCount = x.Projects.Count,
-                x.CreatedAt
+                Entity = x,
+                ProjectsCount = x.Projects.Count
             })
             .ToListAsync(ct);
 
         if (subcontractors.Count == 0)
             return Array.Empty<SubcontractorDto>();
 
-        var subIds = subcontractors.Select(x => x.Id).ToList();
+        var subIds = subcontractors.Select(x => x.Entity.Id).ToList();
         var employees = await db.Employees.AsNoTracking()
             .Where(e => subIds.Contains(e.SubcontractorId))
             .Select(e => new { e.Id, e.SubcontractorId })
@@ -74,16 +69,16 @@ public sealed class ListSubcontractorsHandler(
 
             var sheetsByEmployee = sheets
                 .GroupBy(s => s.EmployeeId)
-                .ToDictionary(g => g.Key, g => (IReadOnlyList<ApprovalSheetEntry>)g.ToList());
+                .ToDictionary(g => g.Key, g => g.ToList());
 
             foreach (var employee in employees)
             {
                 sheetsByEmployee.TryGetValue(employee.Id, out var employeeSheets);
-                employeeSheets ??= Array.Empty<ApprovalSheetEntry>();
-                var status = EmployeeStatusResolver.ResolveFromSheets(employeeSheets);
+                employeeSheets ??= [];
+                var status = Employees.EmployeeStatusResolver.ResolveFromSheets(employeeSheets);
                 var counts = approvalCounts[employee.SubcontractorId];
 
-                if (status == ApprovalStatus.Approved)
+                if (status == Domain.Enums.ApprovalStatus.Approved)
                     approvalCounts[employee.SubcontractorId] = (counts.Approved + 1, counts.NotApproved);
                 else
                     approvalCounts[employee.SubcontractorId] = (counts.Approved, counts.NotApproved + 1);
@@ -93,16 +88,13 @@ public sealed class ListSubcontractorsHandler(
         return subcontractors
             .Select(x =>
             {
-                var counts = approvalCounts[x.Id];
-                return new SubcontractorDto(
-                    x.Id,
-                    x.Name,
-                    x.Bin,
+                var counts = approvalCounts[x.Entity.Id];
+                return SubcontractorMapper.ToDto(
+                    x.Entity,
                     x.ProjectsCount,
                     counts.Approved,
                     counts.NotApproved,
-                    x.IsActive,
-                    x.CreatedAt);
+                    x.Entity.Manager?.FullName);
             })
             .ToList();
     }

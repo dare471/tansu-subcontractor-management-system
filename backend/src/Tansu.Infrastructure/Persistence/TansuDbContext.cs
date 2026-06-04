@@ -11,6 +11,7 @@ public class TansuDbContext : DbContext, ITansuDbContext
     public TansuDbContext(DbContextOptions<TansuDbContext> options) : base(options) { }
 
     public DbSet<Subcontractor> Subcontractors => Set<Subcontractor>();
+    public DbSet<SubcontractorDocument> SubcontractorDocuments => Set<SubcontractorDocument>();
     public DbSet<ProjectRef> ProjectRefs => Set<ProjectRef>();
     public DbSet<ProjectDocument> ProjectDocuments => Set<ProjectDocument>();
     public DbSet<ProjectSubcontractor> ProjectSubcontractors => Set<ProjectSubcontractor>();

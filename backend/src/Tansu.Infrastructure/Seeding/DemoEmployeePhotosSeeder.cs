@@ -30,26 +30,24 @@ public static class DemoEmployeePhotosSeeder
             .ToListAsync();
 
         if (subs.Count == 0)
-        {
-            logger.LogInformation("Субподрядчики не найдены, фото не загружены.");
             return;
-        }
 
         var employees = await ctx.Employees
             .Where(e => subs.Contains(e.SubcontractorId))
             .ToListAsync();
 
         if (employees.Count == 0)
-        {
-            logger.LogInformation("Сотрудники не найдены.");
             return;
-        }
 
         var portrait = DemoPortraitAsset.Bytes;
+        var hrBySub = await DemoSeederUploaders.LoadSubcontractorHrUserIdsAsync(ctx);
         var changed = 0;
 
         foreach (var employee in employees)
         {
+            if (DemoSeedData.PendingPhotoReviewIins.Contains(employee.Iin))
+                continue;
+
             if (employee.PhotoReviewStatus == EmployeePhotoReviewStatus.Approved
                 && !string.IsNullOrEmpty(employee.PhotoPath))
                 continue;
@@ -61,6 +59,7 @@ public static class DemoEmployeePhotosSeeder
             employee.PhotoReviewStatus = EmployeePhotoReviewStatus.Approved;
             employee.PhotoReviewReason = null;
             employee.UpdatedAt = DateTimeOffset.UtcNow;
+            DemoSeederUploaders.ApplyPhotoUploader(employee, hrBySub);
 
             var hasReview = await ctx.EmployeePhotoReviews.AnyAsync(
                 r => r.EmployeeId == employee.Id && r.PhotoPath == relativePath);
@@ -85,10 +84,6 @@ public static class DemoEmployeePhotosSeeder
         {
             await ctx.SaveChangesAsync();
             logger.LogInformation("Загружено фото для {Count} сотрудников.", changed);
-        }
-        else
-        {
-            logger.LogInformation("Фото уже актуальны.");
         }
     }
 }

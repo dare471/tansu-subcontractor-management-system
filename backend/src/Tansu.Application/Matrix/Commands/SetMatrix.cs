@@ -1,9 +1,11 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Tansu.Application.Auth;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Domain.Entities;
+using Tansu.Domain.Enums;
 
 namespace Tansu.Application.Matrix.Commands;
 
@@ -27,11 +29,23 @@ public sealed class SetMatrixValidator : AbstractValidator<SetMatrixCommand>
     }
 }
 
-public sealed class SetMatrixHandler(ITansuDbContext db)
-    : IRequestHandler<SetMatrixCommand, IReadOnlyList<MatrixStepDto>>
+public sealed class SetMatrixHandler(
+    ITansuDbContext db,
+    ICurrentUser currentUser,
+    ITansuAccessService accessService) : IRequestHandler<SetMatrixCommand, IReadOnlyList<MatrixStepDto>>
 {
     public async Task<IReadOnlyList<MatrixStepDto>> Handle(SetMatrixCommand req, CancellationToken ct)
     {
+        if (currentUser.UserType != UserType.Tansu)
+            throw new ForbiddenException();
+
+        var access = await accessService.GetAccessAsync(ct);
+        accessService.EnsurePermission(access, p => p.CanManageApprovalMatrix, "Изменение матрицы недоступно для вашей роли.");
+        accessService.EnsureCanModify(access);
+        await accessService.EnsureSubcontractorVisibleAsync(req.SubcontractorId, ct);
+        if (access.VisibleProjectOids is { } projects && !projects.Contains(req.ProjectOid))
+            throw new ForbiddenException("Проект вне вашей области видимости.");
+
         if (!await db.ProjectRefs.AnyAsync(p => p.ProjectOid == req.ProjectOid, ct))
             throw new NotFoundException("Project", req.ProjectOid);
 

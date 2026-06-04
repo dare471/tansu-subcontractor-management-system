@@ -20,6 +20,7 @@ public sealed record CreateUserCommand(
     Guid? SubcontractorId,
     string? ApproverRole,
     string? TansuRole,
+    string? EmployerCompany,
     Guid? ManagerUserId,
     IReadOnlyList<Guid>? ProjectOids,
     IReadOnlyList<Guid>? SubcontractorIds) : IRequest<CreateUserResponse>;
@@ -33,15 +34,23 @@ public sealed class CreateUserValidator : AbstractValidator<CreateUserCommand>
         RuleFor(x => x.Email).NotEmpty().EmailAddress();
         RuleFor(x => x.UserType)
             .Must(t => t == UserType.Tansu || t == UserType.Subcontractor)
-            .WithMessage("UserType должен быть TANSU или Subcontractor.");
+            .WithMessage("Допустимы учётные записи ТАНСУ или субподрядчика.");
         RuleFor(x => x.SubcontractorId)
             .NotEmpty().When(x => x.UserType == UserType.Subcontractor)
-            .WithMessage("Для пользователя-субподрядчика обязателен SubcontractorId.");
+            .WithMessage("Выберите организацию субподрядчика.");
+        RuleFor(x => x.EmployerCompany)
+            .Must(TansuEmployerCompany.IsValid)
+            .When(x => x.UserType == UserType.Tansu)
+            .WithMessage("Укажите компанию ТАНСУ.");
+        RuleFor(x => x.TansuRole)
+            .NotEmpty().When(x => x.UserType == UserType.Tansu)
+            .WithMessage("Укажите роль.");
     }
 }
 
 public sealed class CreateUserHandler(
     ITansuDbContext db,
+    ICurrentUser currentUser,
     ITansuAccessService accessService,
     IPasswordHasher hasher,
     IPublishEndpoint publisher) : IRequestHandler<CreateUserCommand, CreateUserResponse>
@@ -49,28 +58,43 @@ public sealed class CreateUserHandler(
     public async Task<CreateUserResponse> Handle(CreateUserCommand req, CancellationToken ct)
     {
         var access = await accessService.GetAccessAsync(ct);
-        accessService.EnsurePermission(
-            access, p => p.CanManageTansuUsers, "Управление пользователями доступно только глобальному администратору.");
+        var isGlobalFlow = access.Permissions.IsGlobalAdmin || access.Permissions.CanManageTansuUsers;
+        UserManagementAccess.EnsureCreate(access, req.UserType, isGlobalFlow);
 
         var email = req.Email.Trim().ToLowerInvariant();
         if (await db.Users.AnyAsync(u => u.Email.ToLower() == email, ct))
             throw new ConflictException("email_taken", "Пользователь с таким email уже существует.");
 
-        if (req.SubcontractorId is { } sid &&
-            !await db.Subcontractors.AnyAsync(s => s.Id == sid, ct))
-            throw new NotFoundException("Subcontractor", sid);
+        if (req.UserType == UserType.Subcontractor)
+        {
+            var sid = req.SubcontractorId ?? throw new ValidationFailedException("Выберите организацию.");
+            if (!await db.Subcontractors.AnyAsync(s => s.Id == sid, ct))
+                throw new NotFoundException("Subcontractor", sid);
 
-        if (req.UserType == UserType.Tansu && req.ApproverRole is not null &&
-            !ApproverRole.IsValid(req.ApproverRole))
-            throw new ValidationFailedException("Недопустимая роль согласующего.");
+            if (!isGlobalFlow)
+            {
+                var managerId = currentUser.UserId ?? throw new UnauthorizedException();
+                await UserManagementAccess.EnsureSubcontractorOwnedByManagerAsync(db, sid, managerId, ct);
+            }
+        }
 
-        if (req.UserType == UserType.Tansu && req.TansuRole is not null &&
-            !TansuRole.IsValid(req.TansuRole))
-            throw new ValidationFailedException("Недопустимая роль ТАНСУ.");
+        if (req.UserType == UserType.Tansu)
+        {
+            if (!TansuEmployerCompany.IsValid(req.EmployerCompany))
+                throw new ValidationFailedException("Укажите компанию ТАНСУ.");
 
-        if (req.ManagerUserId is { } managerId &&
-            !await db.Users.AnyAsync(x => x.Id == managerId && x.UserType == UserType.Tansu, ct))
-            throw new NotFoundException("User", managerId);
+            if (req.ApproverRole is not null && !ApproverRole.IsValid(req.ApproverRole))
+                throw new ValidationFailedException("Недопустимая роль согласующего.");
+
+            if (!TansuRole.IsValid(req.TansuRole))
+                throw new ValidationFailedException("Недопустимая роль.");
+        }
+
+        if (req.ManagerUserId is { } managerIdCheck &&
+            !await db.Users.AnyAsync(x => x.Id == managerIdCheck && x.UserType == UserType.Tansu, ct))
+        {
+            throw new NotFoundException("User", managerIdCheck);
+        }
 
         string? tempPassword = null;
         string? hash = null;
@@ -93,9 +117,8 @@ public sealed class CreateUserHandler(
             ApproverRole = req.UserType == UserType.Tansu && !string.IsNullOrWhiteSpace(req.ApproverRole)
                 ? req.ApproverRole
                 : null,
-            TansuRole = req.UserType == UserType.Tansu && !string.IsNullOrWhiteSpace(req.TansuRole)
-                ? req.TansuRole
-                : null,
+            TansuRole = req.UserType == UserType.Tansu ? req.TansuRole : null,
+            EmployerCompany = req.UserType == UserType.Tansu ? req.EmployerCompany : null,
             ManagerUserId = req.UserType == UserType.Tansu ? req.ManagerUserId : null,
             PasswordHash = hash,
             MustChangePassword = mustChange,
@@ -104,15 +127,6 @@ public sealed class CreateUserHandler(
 
         db.Users.Add(user);
         await db.SaveChangesAsync(ct);
-
-        if (req.UserType == UserType.Tansu)
-        {
-            if (req.ProjectOids is { Count: > 0 } projectOids)
-                await UserAssignmentSync.SyncProjectsAsync(db, user, projectOids, ct);
-            if (req.SubcontractorIds is { Count: > 0 } subIds)
-                await UserAssignmentSync.SyncSubcontractorsAsync(db, user, subIds, ct);
-            await db.SaveChangesAsync(ct);
-        }
 
         await publisher.Publish(new UserCreatedMessage(
             user.Id, user.Email, user.FullName, user.UserType,

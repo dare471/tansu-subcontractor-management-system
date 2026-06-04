@@ -49,6 +49,23 @@ public static class DemoSeedData
 
     public static readonly string[] LegacySeedIinPrefixes = ["9900", "9910"];
 
+    public static readonly string[] PendingPhotoReviewIins =
+    [
+        SeedMontazhEmployeeIins[1],
+        SeedMontazhEmployeeIins[2],
+        SeedEnergoEmployeeIins[0]
+    ];
+
+    public static readonly string[] VisitJournalEmployeeIins =
+    [
+        SeedMontazhEmployeeIins[3],
+        SeedMontazhEmployeeIins[4],
+        SeedMontazhEmployeeIins[5],
+        SeedEnergoEmployeeIins[2]
+    ];
+
+    public const string AdminInboxBatchTitle = "Срочное согласование — Айдос";
+
     public static readonly ApproverProfile[] TansuApprovers =
     [
         new("approver1@tansu.local", "Алия Нуржанова", "Руководитель проекта"),

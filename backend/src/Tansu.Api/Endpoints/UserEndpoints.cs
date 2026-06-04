@@ -20,8 +20,7 @@ public static class UserEndpoints
             [FromQuery] Guid? subcontractorId,
             [FromQuery] string? search,
             IMediator m, CancellationToken ct) =>
-                Results.Ok(await m.Send(new ListUsersQuery(userType, subcontractorId, search), ct)))
-            .WithSummary("Список пользователей (только глобальный администратор).");
+                Results.Ok(await m.Send(new ListUsersQuery(userType, subcontractorId, search), ct)));
 
         g.MapPost("", async (
             [FromBody] CreateUserRequest req,
@@ -29,7 +28,7 @@ public static class UserEndpoints
         {
             var res = await m.Send(new CreateUserCommand(
                 req.FullName, req.Position, req.Email, req.UserType, req.SubcontractorId,
-                req.ApproverRole, req.TansuRole, req.ManagerUserId,
+                req.ApproverRole, req.TansuRole, req.EmployerCompany, req.ManagerUserId,
                 req.ProjectOids, req.SubcontractorIds), ct);
             return Results.Created($"/api/users/{res.User.Id}", res);
         });
@@ -39,7 +38,7 @@ public static class UserEndpoints
             IMediator m, CancellationToken ct) =>
                 Results.Ok(await m.Send(new UpdateUserCommand(
                     id, req.FullName, req.Position, req.IsActive, req.StatusComment, req.ApproverRole,
-                    req.TansuRole, req.ManagerUserId, req.ProjectOids, req.SubcontractorIds), ct)));
+                    req.TansuRole, req.EmployerCompany, req.ManagerUserId, req.ProjectOids, req.SubcontractorIds), ct)));
 
         g.MapGet("/{id:guid}/blocks", async (
             Guid id, IMediator m, CancellationToken ct) =>

@@ -1,8 +1,5 @@
 namespace Tansu.Domain.Entities;
 
-/// <summary>
-/// Прохождение опроса по технике безопасности в личном кабинете сотрудника.
-/// </summary>
 public class EmployeeSafetyQuizCompletion
 {
     public Guid Id { get; set; } = Guid.NewGuid();

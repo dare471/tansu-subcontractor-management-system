@@ -2,6 +2,7 @@ using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Tansu.Application.Auth;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Domain.Entities;
@@ -83,11 +84,13 @@ public sealed record ManualRejectEmployeePhotoCommand(Guid EmployeeId, string Re
 
 public sealed class ManualApproveEmployeePhotoHandler(
     ITansuDbContext db,
-    ICurrentUser currentUser) : IRequestHandler<ManualApproveEmployeePhotoCommand, EmployeePhotoReviewDto>
+    ICurrentUser currentUser,
+    ITansuAccessService accessService) : IRequestHandler<ManualApproveEmployeePhotoCommand, EmployeePhotoReviewDto>
 {
     public async Task<EmployeePhotoReviewDto> Handle(ManualApproveEmployeePhotoCommand req, CancellationToken ct)
     {
-        EmployeePhotoReviewAuthorization.EnsureManualReviewer(currentUser);
+        await EmployeePhotoReviewAuthorization.EnsureCanReviewPhotosAsync(currentUser, accessService, ct);
+        await accessService.EnsureEmployeeVisibleAsync(req.EmployeeId, ct);
 
         var employee = await db.Employees.FirstOrDefaultAsync(e => e.Id == req.EmployeeId, ct)
             ?? throw new NotFoundException("Employee", req.EmployeeId);
@@ -124,11 +127,13 @@ public sealed class ManualApproveEmployeePhotoHandler(
 
 public sealed class ManualRejectEmployeePhotoHandler(
     ITansuDbContext db,
-    ICurrentUser currentUser) : IRequestHandler<ManualRejectEmployeePhotoCommand, EmployeePhotoReviewDto>
+    ICurrentUser currentUser,
+    ITansuAccessService accessService) : IRequestHandler<ManualRejectEmployeePhotoCommand, EmployeePhotoReviewDto>
 {
     public async Task<EmployeePhotoReviewDto> Handle(ManualRejectEmployeePhotoCommand req, CancellationToken ct)
     {
-        EmployeePhotoReviewAuthorization.EnsureManualReviewer(currentUser);
+        await EmployeePhotoReviewAuthorization.EnsureCanReviewPhotosAsync(currentUser, accessService, ct);
+        await accessService.EnsureEmployeeVisibleAsync(req.EmployeeId, ct);
 
         var reason = req.Reason.Trim();
         if (string.IsNullOrEmpty(reason))

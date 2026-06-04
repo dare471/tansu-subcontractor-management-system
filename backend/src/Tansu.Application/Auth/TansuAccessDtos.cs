@@ -10,8 +10,14 @@ public sealed record TansuPermissionsDto(
     bool CanManageSubordinates,
     bool CanViewEmployees,
     bool CanUploadDocuments,
+    bool CanViewProjects,
+    bool CanManageProjects,
+    bool CanViewSubcontractors,
+    bool CanReviewPhotos,
     bool IsReadOnlyMonitoring,
-    bool IsGlobalAdmin);
+    bool IsGlobalAdmin,
+    bool CanManageSubcontractorUsers,
+    bool CanReassignSubcontractorManager);
 
 public sealed record TansuAccessContext(
     string? TansuRole,

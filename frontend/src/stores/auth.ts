@@ -15,9 +15,15 @@ const defaultPermissions: TansuPermissions = {
   canBlockEmployees: false,
   canViewVisitJournal: false,
   canManageTansuUsers: false,
+  canManageSubcontractorUsers: false,
+  canReassignSubcontractorManager: false,
   canManageSubordinates: false,
   canViewEmployees: false,
   canUploadDocuments: false,
+  canViewProjects: false,
+  canManageProjects: false,
+  canViewSubcontractors: false,
+  canReviewPhotos: false,
   isReadOnlyMonitoring: false,
   isGlobalAdmin: false
 };
@@ -41,7 +47,12 @@ export const useAuthStore = defineStore('auth', {
     },
     canViewVisitJournal: (s) =>
       !!s.user?.isSuperUser || !!s.user?.permissions?.canViewVisitJournal,
-    canManageUsers: (s) => !!s.user?.permissions?.isGlobalAdmin || !!s.user?.isSuperUser,
+    canManageUsers: (s) =>
+      !!s.user?.permissions?.isGlobalAdmin ||
+      !!s.user?.permissions?.canManageTansuUsers ||
+      !!s.user?.isSuperUser,
+    canManageSubcontractorUsers: (s) =>
+      !!s.user?.permissions?.canManageSubcontractorUsers || !!s.user?.permissions?.isGlobalAdmin,
     canRegisterSubcontractors: (s) =>
       !!s.user?.permissions?.canRegisterSubcontractors || !!s.user?.permissions?.isGlobalAdmin,
     canManageApprovalMatrix: (s) =>
@@ -52,6 +63,16 @@ export const useAuthStore = defineStore('auth', {
       s.user?.userType === 'Subcontractor' ||
       !!s.user?.permissions?.canViewEmployees ||
       !!s.user?.permissions?.isGlobalAdmin,
+    isReadOnly: (s) =>
+      !!s.user?.permissions?.isReadOnlyMonitoring && !s.user?.permissions?.isGlobalAdmin,
+    canViewProjects: (s) =>
+      !!s.user?.permissions?.canViewProjects || !!s.user?.permissions?.isGlobalAdmin,
+    canManageProjects: (s) =>
+      !!s.user?.permissions?.canManageProjects || !!s.user?.permissions?.isGlobalAdmin,
+    canViewSubcontractors: (s) =>
+      !!s.user?.permissions?.canViewSubcontractors || !!s.user?.permissions?.isGlobalAdmin,
+    canReviewPhotos: (s) =>
+      !!s.user?.permissions?.canReviewPhotos || !!s.user?.permissions?.isGlobalAdmin,
     mustChangePassword: (s) => !!s.user?.mustChangePassword
   },
   actions: {

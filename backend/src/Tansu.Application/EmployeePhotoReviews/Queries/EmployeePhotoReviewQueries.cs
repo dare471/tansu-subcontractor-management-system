@@ -69,7 +69,8 @@ public sealed class ListPendingPhotoReviewsHandler(
 {
     public async Task<IReadOnlyList<PendingPhotoReviewItemDto>> Handle(ListPendingPhotoReviewsQuery req, CancellationToken ct)
     {
-        EmployeePhotoReviewAuthorization.EnsureManualReviewer(currentUser);
+        await EmployeePhotoReviewAuthorization.EnsureCanReviewPhotosAsync(currentUser, accessService, ct);
+
         var access = await accessService.GetAccessAsync(ct);
 
         var q = db.Employees.AsNoTracking()

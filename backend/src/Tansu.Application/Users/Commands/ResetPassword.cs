@@ -13,6 +13,7 @@ public sealed record ResetPasswordCommand(Guid Id) : IRequest<string>;
 
 public sealed class ResetPasswordHandler(
     ITansuDbContext db,
+    ICurrentUser currentUser,
     ITansuAccessService accessService,
     IPasswordHasher hasher,
     IPublishEndpoint publisher) : IRequestHandler<ResetPasswordCommand, string>
@@ -20,11 +21,11 @@ public sealed class ResetPasswordHandler(
     public async Task<string> Handle(ResetPasswordCommand req, CancellationToken ct)
     {
         var access = await accessService.GetAccessAsync(ct);
-        accessService.EnsurePermission(
-            access, p => p.CanManageTansuUsers, "Управление пользователями доступно только глобальному администратору.");
 
         var u = await db.Users.FirstOrDefaultAsync(x => x.Id == req.Id, ct)
             ?? throw new NotFoundException("User", req.Id);
+
+        UserManagementAccess.EnsureManageUser(access, u, currentUser.UserId);
 
         if (u.UserType != UserType.Subcontractor)
             throw new ValidationFailedException(

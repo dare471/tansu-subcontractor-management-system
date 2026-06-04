@@ -24,13 +24,13 @@ public static class TansuRole
 
     public static string Label(string role) => role switch
     {
-        OidManager => "ОИД менеджер",
-        OidDirector => "ОИД начальник / Ком. директор",
-        SbProject => "СБ на проекте",
-        SbChief => "СБ начальник",
-        SafetyProject => "БиОТ/ТБ на проекте",
-        SafetyChief => "БиОТ начальник",
-        ProjectManager => "Руководитель проекта / начальник участка",
+        OidManager => "Менеджер",
+        OidDirector => "Администратор",
+        SbProject => "Согласующий (СБ на проекте)",
+        SbChief => "Согласующий (СБ начальник)",
+        SafetyProject => "Согласующий (БиОТ на проекте)",
+        SafetyChief => "Согласующий (БиОТ начальник)",
+        ProjectManager => "Согласующий (руководитель проекта)",
         GlobalAdmin => "Глобальный администратор",
         _ => role
     };
