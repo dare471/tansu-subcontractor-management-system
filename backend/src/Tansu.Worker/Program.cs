@@ -7,6 +7,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 builder.Services.Configure<AppLinksOptions>(builder.Configuration.GetSection(AppLinksOptions.SectionName));
+builder.Services.Configure<BrandingOptions>(builder.Configuration.GetSection(BrandingOptions.SectionName));
 
 builder.Services.AddSingleton<IEmailTemplateRenderer, RazorLightEmailRenderer>();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();

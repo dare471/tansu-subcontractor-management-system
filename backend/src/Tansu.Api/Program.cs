@@ -11,7 +11,7 @@ using Tansu.Infrastructure.Seeding;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddTansuInfrastructure(builder.Configuration);
-builder.Services.AddTansuApplication();
+builder.Services.AddTansuApplication(builder.Configuration);
 builder.Services.AddTansuMessaging(builder.Configuration);
 builder.Services.AddTansuAuth(builder.Configuration);
 

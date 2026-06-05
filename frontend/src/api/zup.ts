@@ -5,6 +5,8 @@ export type ZupEmployee = {
   fullName: string;
   position: string;
   email: string;
+  department?: string;
+  mobile?: string;
 };
 
 export const TANSU_COMPANY_OPTIONS = [

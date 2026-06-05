@@ -52,6 +52,8 @@ export type UpdateUserPayload = {
   tansuRole?: string | null;
   employerCompany?: string | null;
   managerUserId?: string | null;
+  projectOids?: string[];
+  subcontractorIds?: string[];
 };
 
 export const USER_TYPE_LABELS: Record<UserType, string> = {
@@ -59,6 +61,12 @@ export const USER_TYPE_LABELS: Record<UserType, string> = {
   Subcontractor: 'Субподрядчик',
   Employee: 'Сотрудник (ЛК)'
 };
+
+export const TANSU_ROLES_NEEDING_PROJECTS = new Set([
+  'sb_project',
+  'safety_project',
+  'project_manager'
+]);
 
 export const TANSU_ROLE_OPTIONS = [
   { label: 'Менеджер', value: 'oid_manager' },
@@ -87,6 +95,9 @@ export const usersApi = {
     subcontractorId?: string | null;
     tansuRole?: string | null;
     employerCompany?: string | null;
+    managerUserId?: string | null;
+    projectOids?: string[];
+    subcontractorIds?: string[];
   }) =>
     apiClient.post<CreateUserResponse>('/api/users', payload).then((r) => r.data),
   update: (id: string, payload: UpdateUserPayload) =>

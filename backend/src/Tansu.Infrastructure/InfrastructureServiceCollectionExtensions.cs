@@ -69,6 +69,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IEmployeeDocumentStorage, LocalEmployeeDocumentStorage>();
         services.AddSingleton<IProjectDocumentStorage, LocalProjectDocumentStorage>();
         services.AddSingleton<ISubcontractorDocumentStorage, LocalSubcontractorDocumentStorage>();
+        services.AddHttpClient<IZupAccessTokenProvider, ZupClientCredentialsTokenProvider>(client =>
+            client.Timeout = TimeSpan.FromSeconds(30));
         services.AddHttpClient<IZupEmployeeDirectory, HttpZupEmployeeDirectory>((sp, client) =>
         {
             var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ZupOptions>>().Value;

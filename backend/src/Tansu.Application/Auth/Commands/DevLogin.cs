@@ -21,7 +21,8 @@ public sealed class DevLoginValidator : AbstractValidator<DevLoginCommand>
 public sealed class DevLoginHandler(
     ITansuDbContext db,
     IJwtTokenService jwt,
-    IHostEnvironment env) : IRequestHandler<DevLoginCommand, LoginResponse>
+    IHostEnvironment env,
+    IAppBranding branding) : IRequestHandler<DevLoginCommand, LoginResponse>
 {
     public async Task<LoginResponse> Handle(DevLoginCommand request, CancellationToken ct)
     {
@@ -33,7 +34,8 @@ public sealed class DevLoginHandler(
             ?? throw new UnauthorizedException("Пользователь не найден.");
 
         if (user.UserType != UserType.Tansu)
-            throw new ValidationFailedException("Локальный вход только для сотрудников ТАНСУ.");
+            throw new ValidationFailedException(
+                $"Локальный вход только для сотрудников {branding.CompanyName}.");
 
         if (!user.IsActive)
             throw new UnauthorizedException("Учётная запись отключена.");

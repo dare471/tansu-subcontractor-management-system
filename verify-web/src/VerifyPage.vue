@@ -5,8 +5,10 @@ import {
 } from 'naive-ui';
 import { Html5Qrcode } from 'html5-qrcode';
 import { verifyApi, type PassLookup, type VerifyFaceResult } from './api';
+import { appBrand } from './config/branding';
 
 const msg = useMessage();
+const cardTitle = `${appBrand.brandName} — проверка пропуска`;
 const token = ref('');
 const pass = ref<PassLookup | null>(null);
 const verifyResult = ref<VerifyFaceResult | null>(null);
@@ -196,7 +198,7 @@ async function verifyFace() {
     return;
   }
   if (!pass.value.hasReferencePhoto) {
-    inlineError.value = 'У сотрудника нет эталонного фото в Tansu — Face ID недоступен.';
+    inlineError.value = `У сотрудника нет эталонного фото в ${appBrand.brandName} — Face ID недоступен.`;
     msg.error(inlineError.value);
     return;
   }
@@ -251,12 +253,12 @@ onUnmounted(() => {
 
 <template>
   <div class="page">
-    <NCard title="Tansu — проверка пропуска" style="max-width:760px;margin:0 auto">
+    <NCard :title="cardTitle" style="max-width:760px;margin:0 auto">
       <NSpace vertical :size="16">
         <NTag :type="statusTag.type" round>{{ statusTag.label }}</NTag>
 
         <NSteps :current="currentStep" size="small">
-          <NStep title="QR пропуска" description="Скан или ссылка из Tansu" />
+          <NStep title="QR пропуска" :description="`Скан или ссылка из ${appBrand.brandName}`" />
           <NStep title="Face ID" description="Селфи и сравнение с фото" />
           <NStep title="Результат" description="Доступ разрешён / запрещён" />
         </NSteps>
@@ -293,7 +295,7 @@ onUnmounted(() => {
             <NText depth="3">{{ pass.subcontractorName }} · {{ pass.projectName ?? '—' }}</NText>
             <NText depth="3">Выдан: {{ new Date(pass.issuedAt).toLocaleString('ru-RU') }}</NText>
             <NAlert v-if="!pass.hasReferencePhoto" type="warning" :show-icon="false">
-              Нет эталонного фото — загрузите фото в Tansu (Сотрудники → Фото).
+              Нет эталонного фото — загрузите фото в {{ appBrand.brandName }} (Сотрудники → Фото).
             </NAlert>
           </NSpace>
         </NCard>
@@ -326,7 +328,7 @@ onUnmounted(() => {
               {{ verifyResult.message }}
               <template v-if="verifyResult.confidence"> ({{ Math.round(verifyResult.confidence * 100) }}%)</template>
               <template v-if="verifyResult.siteVisitRecorded">
-                <br>Запись о проходе на объект сохранена в Tansu.
+                <br>Запись о проходе на объект сохранена в {{ appBrand.brandName }}.
               </template>
             </NAlert>
           </NSpace>

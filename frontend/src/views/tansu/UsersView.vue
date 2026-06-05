@@ -7,6 +7,7 @@ import {
 import {
   usersApi,
   TANSU_ROLE_OPTIONS,
+  TANSU_ROLES_NEEDING_PROJECTS,
   EMPLOYER_COMPANY_LABELS,
   USER_TYPE_LABELS,
   type User,
@@ -14,6 +15,7 @@ import {
   type UserBlockStatus
 } from '@/api/users';
 import { subcontractorsApi } from '@/api/subcontractors';
+import { projectsApi, type Project } from '@/api/projects';
 import { zupApi, TANSU_COMPANY_OPTIONS, type ZupEmployee } from '@/api/zup';
 import { toApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
@@ -31,6 +33,7 @@ const isManagerOnly = computed(
 
 const items = ref<User[]>([]);
 const subs = ref<{ label: string; value: string }[]>([]);
+const projects = ref<Project[]>([]);
 const tansuManagers = ref<{ label: string; value: string }[]>([]);
 const loading = ref(false);
 const search = ref('');
@@ -47,6 +50,8 @@ const form = ref({
   tansuRole: null as string | null,
   employerCompany: null as string | null,
   zupEmployeeId: null as string | null,
+  projectOids: [] as string[],
+  subcontractorIds: [] as string[],
   isActive: true,
   statusComment: ''
 });
@@ -79,6 +84,39 @@ const zupOptions = computed(() =>
     value: e.externalId
   }))
 );
+
+const projectOptions = computed(() =>
+  projects.value.map((p) => ({
+    label: p.name || p.projectOid,
+    value: p.projectOid
+  }))
+);
+
+const createSubcontractorUser = computed(
+  () => isManagerOnly.value || (isGlobalAdmin.value && filterType.value === 'Subcontractor')
+);
+
+const showVisibilityFields = computed(() => {
+  if (!isGlobalAdmin.value || employeeMode.value || createSubcontractorUser.value) return false;
+  if (editing.value) return editing.value.userType === 'TANSU';
+  return true;
+});
+
+function tansuVisibilityPayload() {
+  return {
+    projectOids: form.value.projectOids,
+    subcontractorIds: form.value.subcontractorIds
+  };
+}
+
+function validateTansuVisibility(): boolean {
+  if (!showVisibilityFields.value || !form.value.tansuRole) return true;
+  if (TANSU_ROLES_NEEDING_PROJECTS.has(form.value.tansuRole) && form.value.projectOids.length === 0) {
+    msg.warning('Для этой роли укажите хотя бы один проект.');
+    return false;
+  }
+  return true;
+}
 
 watch(() => form.value.employerCompany, async (company) => {
   form.value.zupEmployeeId = null;
@@ -117,8 +155,12 @@ async function load() {
 }
 
 async function loadFilters() {
-  const subList = await subcontractorsApi.list();
+  const [subList, projectList] = await Promise.all([
+    subcontractorsApi.list(),
+    isGlobalAdmin.value ? projectsApi.list() : Promise.resolve([] as Project[])
+  ]);
   subs.value = subList.map((s) => ({ label: `${s.name} (${s.bin})`, value: s.id }));
+  projects.value = projectList;
   if (isGlobalAdmin.value) {
     const all = await usersApi.list({ userType: 'TANSU' });
     tansuManagers.value = all
@@ -136,6 +178,8 @@ function openCreate() {
     tansuRole: isManagerOnly.value ? null : null,
     employerCompany: isGlobalAdmin.value ? null : null,
     zupEmployeeId: null,
+    projectOids: [],
+    subcontractorIds: [],
     isActive: true,
     statusComment: ''
   };
@@ -152,6 +196,7 @@ function openEdit(row: User) {
       fullName: row.fullName, position: row.position, email: row.email,
       subcontractorId: row.subcontractorId,
       tansuRole: null, employerCompany: null, zupEmployeeId: null,
+      projectOids: [], subcontractorIds: [],
       isActive: row.isActive, statusComment: ''
     };
     showForm.value = true;
@@ -167,6 +212,8 @@ function openEdit(row: User) {
     tansuRole: row.tansuRole,
     employerCompany: row.employerCompany,
     zupEmployeeId: null,
+    projectOids: [...row.projectOids],
+    subcontractorIds: [...row.subcontractorIds],
     isActive: row.isActive,
     statusComment: ''
   };
@@ -181,17 +228,40 @@ async function save() {
         return;
       }
       const statusChanged = initialIsActive.value !== form.value.isActive;
+      if (editing.value.userType === 'TANSU' && !validateTansuVisibility()) return;
       await usersApi.update(editing.value.id, {
         fullName: form.value.fullName,
         position: form.value.position,
         isActive: form.value.isActive,
         statusComment: statusChanged ? form.value.statusComment.trim() || null : null,
         tansuRole: editing.value.userType === 'TANSU' ? form.value.tansuRole : null,
-        employerCompany: editing.value.userType === 'TANSU' ? form.value.employerCompany : null
+        employerCompany: editing.value.userType === 'TANSU' ? form.value.employerCompany : null,
+        ...(editing.value.userType === 'TANSU' ? tansuVisibilityPayload() : {})
       });
       msg.success('Сохранено');
     } else {
-      if (isGlobalAdmin.value) {
+      if (!form.value.fullName.trim() || !form.value.position.trim() || !form.value.email.trim()) {
+        msg.warning('Заполните ФИО, должность и email');
+        return;
+      }
+      if (isGlobalAdmin.value && filterType.value === 'Subcontractor') {
+        if (!form.value.subcontractorId) {
+          msg.warning('Выберите организацию субподрядчика');
+          return;
+        }
+        const res = await usersApi.create({
+          fullName: form.value.fullName,
+          position: form.value.position,
+          email: form.value.email,
+          userType: 'Subcontractor',
+          subcontractorId: form.value.subcontractorId
+        });
+        dialog.info({
+          title: 'Учётная запись создана',
+          content: `Email: ${res.user.email}\nВременный пароль: ${res.temporaryPassword}`,
+          positiveText: 'OK'
+        });
+      } else if (isGlobalAdmin.value) {
         if (!form.value.employerCompany) {
           msg.warning('Выберите компанию');
           return;
@@ -200,13 +270,15 @@ async function save() {
           msg.warning('Выберите роль');
           return;
         }
+        if (!validateTansuVisibility()) return;
         const res = await usersApi.create({
           fullName: form.value.fullName,
           position: form.value.position,
           email: form.value.email,
           userType: 'TANSU',
           tansuRole: form.value.tansuRole,
-          employerCompany: form.value.employerCompany
+          employerCompany: form.value.employerCompany,
+          ...tansuVisibilityPayload()
         });
         if (res.temporaryPassword) {
           dialog.info({
@@ -306,7 +378,7 @@ function userTypeTagType(t: UserType) {
 const TABLE_SCROLL_X = computed(() => {
   if (filterType.value === 'Subcontractor' || isManagerOnly.value) return 1200;
   if (filterType.value === 'Employee') return 1420;
-  return 1500;
+  return isGlobalAdmin.value && filterType.value === 'TANSU' ? 1860 : 1500;
 });
 
 const columns = computed<DataTableColumns<User>>(() => {
@@ -360,6 +432,16 @@ const columns = computed<DataTableColumns<User>>(() => {
       {
         title: 'Роль', key: 'tansuRole', width: 220,
         render: (r) => roleLabel(r.tansuRole)
+      },
+      {
+        title: 'Проекты', key: 'projectNames', width: 180,
+        ellipsis: { tooltip: true },
+        render: (r) => r.projectNames.length ? r.projectNames.join(', ') : '—'
+      },
+      {
+        title: 'СП (огранич.)', key: 'subcontractorNames', width: 180,
+        ellipsis: { tooltip: true },
+        render: (r) => r.subcontractorNames.length ? r.subcontractorNames.join(', ') : '—'
       }
     );
   }
@@ -409,7 +491,7 @@ const createModalTitle = computed(() => {
     if (editing.value.userType === 'Subcontractor') return 'Админ субподрядчика';
     return 'Пользователь ТАНСУ';
   }
-  if (isManagerOnly.value) return 'Новый админ субподрядчика';
+  if (createSubcontractorUser.value) return 'Новый админ субподрядчика';
   return 'Новый пользователь ТАНСУ';
 });
 
@@ -449,9 +531,9 @@ onMounted(async () => { await Promise.all([load(), loadFilters()]); });
       </div>
     </NSpace>
 
-    <NModal v-model:show="showForm" preset="card" :title="createModalTitle" style="width:560px">
+    <NModal v-model:show="showForm" preset="card" :title="createModalTitle" style="width:620px">
       <NForm @submit.prevent="save">
-        <template v-if="!editing && isGlobalAdmin && !employeeMode">
+        <template v-if="!editing && isGlobalAdmin && !employeeMode && !createSubcontractorUser">
           <NFormItem label="Компания">
             <NSelect
               v-model:value="form.employerCompany"
@@ -490,7 +572,7 @@ onMounted(async () => { await Promise.all([load(), loadFilters()]); });
           Учётная запись создаётся при согласовании сотрудника.
         </p>
         <NFormItem
-          v-if="(isManagerOnly || (!editing && !isGlobalAdmin)) && !employeeMode"
+          v-if="(!editing && createSubcontractorUser) && !employeeMode"
           label="Организация субподрядчика"
         >
           <NSelect
@@ -503,11 +585,36 @@ onMounted(async () => { await Promise.all([load(), loadFilters()]); });
           <NInput v-else :value="editing?.subcontractorName ?? '—'" disabled />
         </NFormItem>
         <NFormItem
-          v-if="(isGlobalAdmin && (form.tansuRole !== null || editing?.userType === 'TANSU' || !editing)) && !employeeMode && !isManagerOnly"
+          v-if="isGlobalAdmin && !createSubcontractorUser && !employeeMode && (editing?.userType === 'TANSU' || !editing)"
           label="Роль"
         >
           <NSelect v-model:value="form.tansuRole" :options="TANSU_ROLE_OPTIONS" placeholder="Выберите роль" />
         </NFormItem>
+        <template v-if="showVisibilityFields">
+          <NFormItem label="Проекты">
+            <NSelect
+              v-model:value="form.projectOids"
+              :options="projectOptions"
+              multiple
+              filterable
+              clearable
+              placeholder="Область видимости по проектам"
+            />
+          </NFormItem>
+          <NFormItem label="Субподрядчики">
+            <NSelect
+              v-model:value="form.subcontractorIds"
+              :options="subs"
+              multiple
+              filterable
+              clearable
+              placeholder="Дополнительное ограничение по СП"
+            />
+          </NFormItem>
+          <p style="margin:0 0 12px;color:var(--brand-text-muted);font-size:13px">
+            Для ролей на проекте (СБ/БиОТ/РП) укажите проекты. Субподрядчики — опционально, сужают список поверх роли.
+          </p>
+        </template>
         <NFormItem :label="employeeMode ? 'Доступ в ЛК' : 'Активен'" v-if="editing">
           <NSwitch v-model:value="form.isActive" />
         </NFormItem>

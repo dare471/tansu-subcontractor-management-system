@@ -81,9 +81,10 @@ internal static class UserManagementAccess
         CancellationToken ct)
     {
         var owned = await db.Subcontractors.AsNoTracking()
-            .AnyAsync(s => s.Id == subcontractorId && s.RegisteredByUserId == managerUserId, ct);
+            .AnyAsync(s => s.Id == subcontractorId &&
+                           (s.RegisteredByUserId == managerUserId || s.ManagerUserId == managerUserId), ct);
 
         if (!owned)
-            throw new ForbiddenException("Можно создавать пользователей только для организаций, которые вы зарегистрировали.");
+            throw new ForbiddenException("Можно создавать пользователей только для своих организаций.");
     }
 }

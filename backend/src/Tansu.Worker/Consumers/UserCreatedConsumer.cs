@@ -11,6 +11,7 @@ public sealed class UserCreatedConsumer(
     IEmailSender sender,
     IEmailTemplateRenderer renderer,
     IOptions<AppLinksOptions> links,
+    IOptions<BrandingOptions> branding,
     ILogger<UserCreatedConsumer> logger)
     : IConsumer<UserCreatedMessage>
 {
@@ -33,6 +34,11 @@ public sealed class UserCreatedConsumer(
 
         var html = await renderer.RenderAsync("user-created.cshtml", model);
         await sender.SendAsync(
-            new EmailMessage(msg.Email, msg.FullName, "Доступ в систему ТАНСУ", html), ctx.CancellationToken);
+            new EmailMessage(
+                msg.Email,
+                msg.FullName,
+                $"Доступ в систему {branding.Value.CompanyName}",
+                html),
+            ctx.CancellationToken);
     }
 }

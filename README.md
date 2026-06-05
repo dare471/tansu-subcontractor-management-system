@@ -94,7 +94,7 @@ curl -s -X POST "http://localhost:${API_PORT:-8080}/api/auth/dev-login" \
   -d '{"email":"admin@tansu.local"}'
 ```
 
-Production — Microsoft Entra ID (`ENTRA_TENANT_ID`, `ENTRA_AUDIENCE`).
+Production — Microsoft Entra ID (`ENTRA_TENANT_ID`, `ENTRA_AUDIENCE`). Справочник сотрудников из ЗУП: `ZUP_CLIENT_ID`, `ZUP_CLIENT_SECRET`, `ZUP_TENANT_ID` (или тот же tenant), `ZUP_AUDIENCE` / `ENTRA_AUDIENCE` для scope `/.default` — см. `.env.example`.
 
 ## Согласование персонала
 

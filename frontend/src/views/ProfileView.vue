@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth';
 import { authApi, type MyProject } from '@/api/auth';
 import { approverRoleLabel } from '@/api/documentRequests';
 import { toApiError } from '@/api/client';
+import { appBrand } from '@/config/branding';
 
 const auth = useAuthStore();
 const msg = useMessage();
@@ -28,7 +29,7 @@ const initials = computed(() => {
 });
 
 const roleLabel = computed(() =>
-  user.value?.userType === 'TANSU' ? 'Сотрудник ТАНСУ' : 'Субподрядчик'
+  user.value?.userType === 'TANSU' ? appBrand.employeeLabel : 'Субподрядчик'
 );
 
 const approverRole = computed(() =>

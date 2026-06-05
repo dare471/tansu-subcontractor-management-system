@@ -132,11 +132,11 @@ public sealed class TansuAccessService(ITansuDbContext db, ICurrentUser currentU
         return role switch
         {
             TansuRole.OidManager => (
-                await SubcontractorsRegisteredByAsync(new HashSet<Guid> { userId }, includeInactive: true, ct),
+                await SubcontractorsManagedByAsync(new HashSet<Guid> { userId }, includeInactive: true, ct),
                 null,
                 true),
             TansuRole.OidDirector => (
-                await SubcontractorsRegisteredByAsync(await DescendantUserIdsAsync(userId, ct), includeInactive: true, ct),
+                await SubcontractorsManagedByAsync(await DescendantUserIdsAsync(userId, ct), includeInactive: true, ct),
                 null,
                 true),
             TansuRole.SbChief or TansuRole.SafetyChief => (
@@ -179,13 +179,15 @@ public sealed class TansuAccessService(ITansuDbContext db, ICurrentUser currentU
         return result;
     }
 
-    private async Task<IReadOnlySet<Guid>> SubcontractorsRegisteredByAsync(
+    private async Task<IReadOnlySet<Guid>> SubcontractorsManagedByAsync(
         IReadOnlySet<Guid> userIds,
         bool includeInactive,
         CancellationToken ct)
     {
         var q = db.Subcontractors.AsNoTracking()
-            .Where(s => s.RegisteredByUserId != null && userIds.Contains(s.RegisteredByUserId.Value));
+            .Where(s =>
+                (s.RegisteredByUserId != null && userIds.Contains(s.RegisteredByUserId.Value))
+                || (s.ManagerUserId != null && userIds.Contains(s.ManagerUserId.Value)));
         if (!includeInactive)
             q = q.Where(s => s.IsActive);
         return (await q.Select(s => s.Id).ToListAsync(ct)).ToHashSet();

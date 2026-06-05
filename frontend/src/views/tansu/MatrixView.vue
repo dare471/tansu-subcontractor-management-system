@@ -8,6 +8,7 @@ import { projectsApi, type Project } from '@/api/projects';
 import { subcontractorsApi, type Subcontractor } from '@/api/subcontractors';
 import { usersApi, type User } from '@/api/users';
 import { toApiError } from '@/api/client';
+import { appBrand } from '@/config/branding';
 
 const msg = useMessage();
 const projects = ref<Project[]>([]);
@@ -167,7 +168,7 @@ const columns = [
         </NSpace>
         <template v-if="projectOid && subcontractorId">
           <NSpace>
-            <NSelect v-model:value="newUserId" :options="tansuUserOptions" placeholder="Добавить согласующего (ТАНСУ)" style="width:380px" filterable />
+            <NSelect v-model:value="newUserId" :options="tansuUserOptions" :placeholder="`Добавить согласующего (${appBrand.companyName})`" style="width:380px" filterable />
             <NButton type="primary" :disabled="!newUserId" @click="addStep">+ Добавить шаг</NButton>
             <NButton type="success" :loading="saving" :disabled="!steps.length" @click="save">Сохранить матрицу</NButton>
           </NSpace>

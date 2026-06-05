@@ -113,6 +113,12 @@ public sealed class UpdateUserHandler(
                     throw new NotFoundException("User", managerId);
                 u.ManagerUserId = req.ManagerUserId;
             }
+
+            if (req.ProjectOids is not null || req.SubcontractorIds is not null)
+            {
+                await UserAssignmentHelper.ValidateAsync(db, req.ProjectOids, req.SubcontractorIds, ct);
+                await UserAssignmentHelper.ReplaceAsync(db, u.Id, req.ProjectOids, req.SubcontractorIds, ct);
+            }
         }
 
         await db.SaveChangesAsync(ct);

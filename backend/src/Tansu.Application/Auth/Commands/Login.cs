@@ -11,7 +11,8 @@ public sealed record LoginCommand(string Email, string Password) : IRequest<Logi
 public sealed class LoginHandler(
     ITansuDbContext db,
     IPasswordHasher hasher,
-    IJwtTokenService jwt) : IRequestHandler<LoginCommand, LoginResponse>
+    IJwtTokenService jwt,
+    IAppBranding branding) : IRequestHandler<LoginCommand, LoginResponse>
 {
     public async Task<LoginResponse> Handle(LoginCommand request, CancellationToken ct)
     {
@@ -24,7 +25,7 @@ public sealed class LoginHandler(
 
         if (user.UserType != UserType.Subcontractor)
             throw new UnauthorizedException(
-                "Сотрудники ТАНСУ авторизуются через Entra ID.");
+                $"Сотрудники {branding.CompanyName} авторизуются через Entra ID.");
 
         if (string.IsNullOrEmpty(user.PasswordHash) || !hasher.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedException("Неверный email или пароль.");

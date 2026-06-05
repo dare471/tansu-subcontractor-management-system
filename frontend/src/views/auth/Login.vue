@@ -5,6 +5,7 @@ import { NForm, NFormItem, NInput, NButton, NSpace, NAlert, NIcon, useMessage } 
 import { MailOutline, LockClosedOutline } from '@vicons/ionicons5';
 import { useAuthStore } from '@/stores/auth';
 import { toApiError } from '@/api/client';
+import { appBrand } from '@/config/branding';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -51,9 +52,9 @@ async function devLogin() {
   <div class="t-login-bg">
     <div class="t-login-card">
       <div class="t-login-brand">
-        <div class="t-login-logo">T</div>
+        <div class="t-login-logo">{{ appBrand.logoLetter }}</div>
         <div>
-          <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:0.5px">TANSU</div>
+          <div style="font-size:22px;font-weight:800;color:#fff;letter-spacing:0.5px">{{ appBrand.companyName }}</div>
           <div style="color:rgba(255,255,255,.6);font-size:12px;text-transform:uppercase;letter-spacing:1px">Субподрядчики</div>
         </div>
       </div>
@@ -90,7 +91,7 @@ async function devLogin() {
 
         <template v-if="isDev">
           <div style="margin-top:24px;padding-top:20px;border-top:1px dashed var(--brand-border)">
-            <p style="margin:0 0 14px 0;font-size:13px;color:var(--brand-text-muted)">Вход для сотрудников ТАНСУ</p>
+            <p style="margin:0 0 14px 0;font-size:13px;color:var(--brand-text-muted)">{{ appBrand.loginSubtitle }}</p>
             <NForm @submit.prevent="devLogin">
               <NFormItem label="Email">
                 <NInput v-model:value="devEmail" placeholder="admin@tansu.local" size="large">

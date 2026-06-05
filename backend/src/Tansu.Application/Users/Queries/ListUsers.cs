@@ -34,7 +34,8 @@ public sealed class ListUsersHandler(
                 u.UserType == UserType.Subcontractor &&
                 u.SubcontractorId != null &&
                 db.Subcontractors.Any(s =>
-                    s.Id == u.SubcontractorId && s.RegisteredByUserId == managerId));
+                    s.Id == u.SubcontractorId &&
+                    (s.RegisteredByUserId == managerId || s.ManagerUserId == managerId)));
             req = req with { UserType = UserType.Subcontractor };
         }
         else if (!access.Permissions.IsGlobalAdmin && !access.Permissions.CanManageTansuUsers)

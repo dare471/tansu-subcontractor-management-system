@@ -128,6 +128,14 @@ public sealed class CreateUserHandler(
         db.Users.Add(user);
         await db.SaveChangesAsync(ct);
 
+        if (req.UserType == UserType.Tansu)
+        {
+            await UserAssignmentHelper.ValidateAsync(db, req.ProjectOids, req.SubcontractorIds, ct);
+            await UserAssignmentHelper.ReplaceAsync(
+                db, user.Id, req.ProjectOids ?? [], req.SubcontractorIds ?? [], ct);
+            await db.SaveChangesAsync(ct);
+        }
+
         await publisher.Publish(new UserCreatedMessage(
             user.Id, user.Email, user.FullName, user.UserType,
             user.SubcontractorId, tempPassword, DateTimeOffset.UtcNow), ct);
