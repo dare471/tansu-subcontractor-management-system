@@ -3,7 +3,7 @@ import { ref, onMounted, computed, h } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   NCard, NSpace, NButton, NTag, NTimeline, NTimelineItem, NH3, NText, NEmpty,
-  NAlert, NModal, NForm, NFormItem, NInput, NSelect, NUpload, NDataTable,
+  NAlert, NForm, NFormItem, NInput, NSelect, NUpload, NDataTable,
   NPopconfirm, useMessage, type DataTableColumns, type UploadFileInfo
 } from 'naive-ui';
 import {
@@ -18,6 +18,7 @@ import {
 import { apiClient } from '@/api/client';
 import { toApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
+import AppDrawer from '@/components/AppDrawer.vue';
 
 type HistoryRow = {
   sheetId: string;
@@ -435,7 +436,7 @@ onMounted(load);
       </template>
     </NSpace>
 
-    <NModal v-model:show="showBlockModal" preset="card" title="Блокировка сотрудника" style="max-width:480px">
+    <AppDrawer v-model:show="showBlockModal" title="Блокировка сотрудника" width="narrow">
       <NAlert type="warning" :show-icon="false" style="margin-bottom:12px">
         Доступ на объект (Hikvision) будет отозван. Субподрядчик получит уведомление с указанной причиной.
       </NAlert>
@@ -444,9 +445,9 @@ onMounted(load);
         <NButton @click="showBlockModal = false">Отмена</NButton>
         <NButton type="error" :loading="blocking" @click="submitBlock">Заблокировать</NButton>
       </NSpace>
-    </NModal>
+    </AppDrawer>
 
-    <NModal v-model:show="showDocModal" preset="card" :title="replaceDocId ? 'Новая версия документа' : 'Загрузить документ'" style="max-width:480px">
+    <AppDrawer v-model:show="showDocModal" :title="replaceDocId ? 'Новая версия документа' : 'Загрузить документ'" width="narrow">
       <NForm @submit.prevent>
         <NFormItem label="Наименование"><NInput v-model:value="docForm.name" /></NFormItem>
         <NFormItem label="Тип"><NSelect v-model:value="docForm.documentType" :options="DOCUMENT_TYPES" /></NFormItem>
@@ -457,14 +458,14 @@ onMounted(load);
           </NUpload>
         </NFormItem>
       </NForm>
-    </NModal>
+    </AppDrawer>
 
-    <NModal v-model:show="showPreview" preset="card" title="Просмотр документа" style="width:90%;max-width:900px" @after-leave="previewUrl = null">
-      <iframe v-if="previewUrl && previewContentType === 'application/pdf'" :src="previewUrl" style="width:100%;height:70vh;border:none" />
+    <AppDrawer v-model:show="showPreview" title="Просмотр документа" width="full" @after-leave="previewUrl = null">
+      <iframe v-if="previewUrl && previewContentType === 'application/pdf'" :src="previewUrl" style="width:100%;height:calc(100vh - 160px);border:none" />
       <img v-else-if="previewUrl" :src="previewUrl" alt="Документ" style="max-width:100%;height:auto" />
-    </NModal>
+    </AppDrawer>
 
-    <NModal v-model:show="showIssueModal" preset="card" :title="issueType === 'helmet' ? 'Выдать каску' : 'Выдать униформу'" style="max-width:420px">
+    <AppDrawer v-model:show="showIssueModal" :title="issueType === 'helmet' ? 'Выдать каску' : 'Выдать униформу'" width="narrow">
       <NForm @submit.prevent="submitIssue">
         <NFormItem label="Размер"><NInput v-model:value="issueForm.size" /></NFormItem>
         <NFormItem label="Инвентарный №"><NInput v-model:value="issueForm.inventoryNumber" /></NFormItem>
@@ -474,6 +475,6 @@ onMounted(load);
           <NButton type="primary" :loading="issuing" @click="submitIssue">Выдать</NButton>
         </NSpace>
       </NForm>
-    </NModal>
+    </AppDrawer>
   </NCard>
 </template>

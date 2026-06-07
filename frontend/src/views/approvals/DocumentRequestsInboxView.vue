@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, h } from 'vue';
 import {
-  NCard, NSpace, NButton, NDataTable, NModal, NInput, NAlert,
+  NCard, NSpace, NButton, NDataTable, NInput, NAlert,
   useMessage, type DataTableColumns
 } from 'naive-ui';
 import {
@@ -9,6 +9,7 @@ import {
   type DocumentRequestInboxItem
 } from '@/api/documentRequests';
 import { toApiError } from '@/api/client';
+import AppDrawer from '@/components/AppDrawer.vue';
 
 const msg = useMessage();
 const items = ref<DocumentRequestInboxItem[]>([]);
@@ -106,11 +107,10 @@ onMounted(load);
       </div>
     </NSpace>
 
-    <NModal
+    <AppDrawer
       :show="!!decisionItem"
-      preset="card"
       :title="decisionMode === 'approve' ? 'Согласовать заявку' : 'Отклонить заявку'"
-      style="width:520px"
+      width="medium"
       @update:show="(v) => { if (!v) decisionItem = null }"
     >
       <NSpace vertical :size="14">
@@ -139,6 +139,6 @@ onMounted(load);
           </NButton>
         </NSpace>
       </NSpace>
-    </NModal>
+    </AppDrawer>
   </NCard>
 </template>

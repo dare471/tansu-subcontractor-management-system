@@ -2,8 +2,9 @@
 import { ref, onMounted, computed, h } from 'vue';
 import { useRouter } from 'vue-router';
 import {
-  NCard, NSpace, NInput, NButton, NDataTable, NModal, NForm, NFormItem,
-  NPopconfirm, NSelect, NEmpty, NTag, useMessage, type DataTableColumns, type SelectOption
+  NCard, NSpace, NInput, NButton, NDataTable, NForm, NFormItem,
+  NPopconfirm, NSelect, NEmpty, NTag, NUpload, useMessage,
+  type DataTableColumns, type SelectOption, type UploadFileInfo
 } from 'naive-ui';
 import { apiClient } from '@/api/client';
 import {
@@ -17,6 +18,7 @@ import { usersApi } from '@/api/users';
 import { projectsApi, type Project } from '@/api/projects';
 import { toApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
+import AppDrawer from '@/components/AppDrawer.vue';
 
 const auth = useAuthStore();
 const msg = useMessage();
@@ -36,6 +38,8 @@ const docs = ref<SubcontractorDocument[]>([]);
 const docsLoading = ref(false);
 const docForm = ref({ name: '', documentType: 'contract' });
 const docUploading = ref(false);
+const docFile = ref<File | null>(null);
+const docUploadKey = ref(0);
 
 const showBindings = ref(false);
 const bindTarget = ref<Subcontractor | null>(null);
@@ -179,14 +183,17 @@ async function openDocuments(row: Subcontractor) {
   }
 }
 
+function onDocFileChange({ fileList }: { fileList: UploadFileInfo[] }) {
+  const latest = fileList.at(-1);
+  docFile.value = latest?.file instanceof File ? latest.file : null;
+}
+
 async function uploadDoc() {
   if (!docsTarget.value || !docForm.value.name.trim()) {
     msg.warning('Укажите наименование документа');
     return;
   }
-  const input = document.getElementById('sub-doc-file') as HTMLInputElement | null;
-  const file = input?.files?.[0];
-  if (!file) {
+  if (!docFile.value) {
     msg.warning('Выберите файл');
     return;
   }
@@ -195,11 +202,12 @@ async function uploadDoc() {
     const fd = new FormData();
     fd.append('name', docForm.value.name.trim());
     fd.append('documentType', docForm.value.documentType);
-    fd.append('file', file);
+    fd.append('file', docFile.value);
     await subcontractorsApi.uploadDocument(docsTarget.value.id, fd);
     docs.value = await subcontractorsApi.documents(docsTarget.value.id);
     docForm.value.name = '';
-    if (input) input.value = '';
+    docFile.value = null;
+    docUploadKey.value += 1;
     msg.success('Документ загружен');
   } catch (e) { msg.error(toApiError(e).detail); }
   finally { docUploading.value = false; }
@@ -228,6 +236,7 @@ async function openDocFile(doc: SubcontractorDocument) {
 }
 
 const TABLE_SCROLL_X = 1280;
+const BINDING_TABLE_SCROLL_X = 1040;
 
 const columns: DataTableColumns<Subcontractor> = [
   {
@@ -314,7 +323,7 @@ onMounted(async () => {
       </div>
     </NSpace>
 
-    <NModal v-model:show="showForm" preset="card" :title="editing ? 'Изменить субподрядчика' : 'Новый субподрядчик'" style="width:480px">
+    <AppDrawer v-model:show="showForm" :title="editing ? 'Изменить субподрядчика' : 'Новый субподрядчик'" width="narrow">
       <NForm @submit.prevent="save">
         <NFormItem label="Наименование">
           <NInput v-model:value="form.name" />
@@ -339,85 +348,102 @@ onMounted(async () => {
           <NButton type="primary" @click="save">Сохранить</NButton>
         </NSpace>
       </NForm>
-    </NModal>
+    </AppDrawer>
 
-    <NModal
+    <AppDrawer
       v-model:show="showBindings"
-      preset="card"
       :title="'Проекты субподрядчика «' + (bindTarget?.name ?? '') + '»'"
-      style="width:720px"
+      width="full"
     >
-      <NSpace vertical :size="16">
-        <div v-if="!projects.length && !bindingsLoading">
-          <NEmpty description="Нет зарегистрированных проектов">
-            <template #extra>
-              <NButton type="primary" @click="router.push({ name: 'projects' })">
-                Перейти к регистрации проектов
-              </NButton>
-            </template>
-          </NEmpty>
-        </div>
+      <NEmpty
+        v-if="!projects.length && !bindingsLoading"
+        description="Нет зарегистрированных проектов"
+      >
+        <template #extra>
+          <NButton type="primary" @click="router.push({ name: 'projects' })">
+            Перейти к регистрации проектов
+          </NButton>
+        </template>
+      </NEmpty>
 
-        <NSpace v-else vertical :size="12" style="width:100%">
-          <NSpace v-if="auth.canRegisterSubcontractors" align="center" style="width:100%">
-            <NSelect
-              v-model:value="selectedProjectOid"
-              :options="availableProjectOptions"
-              placeholder="Выберите проект для привязки"
-              filterable
-              clearable
-              style="flex:1;min-width:280px"
-              :disabled="bindingsLoading || !availableProjectOptions.length"
-            />
-            <NInput
-              v-model:value="bindActivityType"
-              placeholder="Вид деятельности на проекте"
-              style="flex:1;min-width:240px"
-              :disabled="bindingsLoading"
-            />
-            <NButton
-              type="primary"
-              :disabled="!selectedProjectOid || !bindActivityType.trim()"
-              :loading="bindingSaving"
-              @click="bindProject"
-            >
-              Привязать
-            </NButton>
-          </NSpace>
-        </NSpace>
-
-        <p v-if="projects.length && !availableProjectOptions.length && !bindingsLoading" style="color:var(--brand-text-muted);font-size:13px;margin:0">
-          Все доступные проекты уже привязаны к этому субподрядчику.
-        </p>
-
-        <div class="t-table-wrap">
-          <NDataTable
-            class="t-data-table"
-            :columns="bindingColumns"
-            :data="bindings"
-            :loading="bindingsLoading"
-            :row-key="(r) => r.projectOid"
-            :scroll-x="980"
-            size="small"
-          />
-        </div>
+      <NSpace
+        v-if="projects.length && auth.canRegisterSubcontractors"
+        class="bindings-form-row"
+        align="center"
+        :size="12"
+        :wrap="true"
+      >
+        <NSelect
+          v-model:value="selectedProjectOid"
+          :options="availableProjectOptions"
+          placeholder="Выберите проект для привязки"
+          filterable
+          clearable
+          class="bindings-form-field bindings-form-field--project"
+          :disabled="bindingsLoading || !availableProjectOptions.length"
+        />
+        <NInput
+          v-model:value="bindActivityType"
+          placeholder="Вид деятельности на проекте"
+          class="bindings-form-field bindings-form-field--activity"
+          :disabled="bindingsLoading"
+        />
+        <NButton
+          type="primary"
+          :disabled="!selectedProjectOid || !bindActivityType.trim()"
+          :loading="bindingSaving"
+          @click="bindProject"
+        >
+          Привязать
+        </NButton>
       </NSpace>
-    </NModal>
 
-    <NModal
-      v-model:show="showDocs"
-      preset="card"
-      :title="'Документы: ' + (docsTarget?.name ?? '')"
-      style="width:640px"
-    >
-      <NSpace vertical>
-        <NSpace v-if="auth.canRegisterSubcontractors" align="center">
-          <NInput v-model:value="docForm.name" placeholder="Наименование" style="flex:1" />
-          <NSelect v-model:value="docForm.documentType" :options="SUBCONTRACTOR_DOC_TYPES" style="width:200px" />
-          <input id="sub-doc-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx" />
-          <NButton type="primary" :loading="docUploading" @click="uploadDoc">Загрузить</NButton>
-        </NSpace>
+      <p
+        v-if="projects.length && !availableProjectOptions.length && !bindingsLoading"
+        class="bindings-hint"
+      >
+        Все доступные проекты уже привязаны к этому субподрядчику.
+      </p>
+
+      <div class="t-table-wrap">
         <NDataTable
+          class="t-data-table"
+          :columns="bindingColumns"
+          :data="bindings"
+          :loading="bindingsLoading"
+          :row-key="(r) => r.projectOid"
+          :scroll-x="BINDING_TABLE_SCROLL_X"
+          size="small"
+        />
+      </div>
+    </AppDrawer>
+
+    <AppDrawer
+      v-model:show="showDocs"
+      :title="'Документы: ' + (docsTarget?.name ?? '')"
+      width="wide"
+    >
+      <NSpace v-if="auth.canRegisterSubcontractors" align="center" :wrap="true">
+        <NInput v-model:value="docForm.name" placeholder="Наименование" style="flex:1;min-width:200px" />
+        <NSelect v-model:value="docForm.documentType" :options="SUBCONTRACTOR_DOC_TYPES" style="width:200px" />
+        <NUpload
+          :key="docUploadKey"
+          accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx"
+          :max="1"
+          :show-file-list="false"
+          :disabled="docUploading"
+          class="sub-doc-upload"
+          @change="onDocFileChange"
+        >
+          <NButton :disabled="docUploading">
+            {{ docFile ? docFile.name : 'Выбрать файл' }}
+          </NButton>
+        </NUpload>
+        <NButton type="primary" :loading="docUploading" @click="uploadDoc">Загрузить</NButton>
+      </NSpace>
+      <div class="t-table-wrap">
+        <NDataTable
+          class="t-data-table"
           :columns="[
             { title: 'Название', key: 'name' },
             { title: 'Тип', key: 'documentTypeLabel' },
@@ -432,7 +458,43 @@ onMounted(async () => {
           :row-key="(r: SubcontractorDocument) => r.id"
           size="small"
         />
-      </NSpace>
-    </NModal>
+      </div>
+    </AppDrawer>
   </NCard>
 </template>
+
+<style scoped>
+.bindings-form-row {
+  width: 100%;
+}
+
+.bindings-form-field {
+  flex: 1 1 240px;
+  min-width: 220px;
+}
+
+.bindings-form-field--project {
+  flex: 1.2 1 280px;
+  min-width: 260px;
+}
+
+.bindings-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--brand-text-muted);
+}
+
+.sub-doc-upload :deep(.n-upload-trigger) {
+  display: inline-flex;
+}
+
+.sub-doc-upload :deep(.n-button) {
+  max-width: 240px;
+}
+
+.sub-doc-upload :deep(.n-button__content) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

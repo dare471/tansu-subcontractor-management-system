@@ -2,7 +2,7 @@
 import { ref, onMounted, computed, h } from 'vue';
 import { useRouter } from 'vue-router';
 import {
-  NCard, NSpace, NInput, NButton, NDataTable, NModal, NForm, NFormItem,
+  NCard, NSpace, NInput, NButton, NDataTable, NForm, NFormItem,
   NSelect, NPopconfirm, NTag, NAlert, NEllipsis, useMessage,
   type DataTableColumns
 } from 'naive-ui';
@@ -10,6 +10,7 @@ import { employeesApi, type Employee } from '@/api/employees';
 import EmployeePhotoAvatar from '@/components/EmployeePhotoAvatar.vue';
 import { authApi, type MyProject } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
+import AppDrawer from '@/components/AppDrawer.vue';
 import { toApiError } from '@/api/client';
 
 const msg = useMessage();
@@ -324,7 +325,7 @@ function onPhotoInputChange(event: Event) {
 
     <input id="photo-input" type="file" accept=".jpg,.jpeg,image/jpeg" hidden @change="onPhotoInputChange" />
 
-    <NModal v-model:show="showForm" preset="card" :title="editing ? 'Изменить сотрудника' : 'Новый сотрудник'" style="width:560px">
+    <AppDrawer v-model:show="showForm" :title="editing ? 'Изменить сотрудника' : 'Новый сотрудник'" width="medium">
       <NForm @submit.prevent="save">
         <NFormItem label="Проект" v-if="!editing">
           <NSelect v-model:value="form.projectOid" :options="projectOptions" />
@@ -338,6 +339,6 @@ function onPhotoInputChange(event: Event) {
           <NButton type="primary" @click="save">Сохранить</NButton>
         </NSpace>
       </NForm>
-    </NModal>
+    </AppDrawer>
   </NCard>
 </template>

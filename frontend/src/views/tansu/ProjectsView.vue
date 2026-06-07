@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, h } from 'vue';
 import { useRouter } from 'vue-router';
-import { NCard, NSpace, NInput, NButton, NDataTable, NModal, NForm, NFormItem, useMessage } from 'naive-ui';
+import { NCard, NSpace, NInput, NButton, NDataTable, NForm, NFormItem, useMessage } from 'naive-ui';
+import AppDrawer from '@/components/AppDrawer.vue';
 import { projectsApi, type Project } from '@/api/projects';
 import { toApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
@@ -75,7 +76,7 @@ onMounted(load);
       </div>
     </NSpace>
 
-    <NModal v-model:show="showForm" preset="card" title="Регистрация проекта" style="width:480px">
+    <AppDrawer v-model:show="showForm" title="Регистрация проекта" width="narrow">
       <NForm @submit.prevent="register">
         <NFormItem label="OID проекта (uuid)">
           <NInput v-model:value="form.projectOid" placeholder="UUID проекта из ERP" />
@@ -88,6 +89,6 @@ onMounted(load);
           <NButton type="primary" @click="register">Сохранить</NButton>
         </NSpace>
       </NForm>
-    </NModal>
+    </AppDrawer>
   </NCard>
 </template>

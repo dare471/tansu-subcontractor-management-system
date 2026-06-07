@@ -3,7 +3,7 @@ import { ref, onMounted, h, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   NCard, NSpace, NButton, NDescriptions, NDescriptionsItem, NDataTable, NTag,
-  NModal, NForm, NFormItem, NInput, NInputNumber, NSelect, NUpload, NEmpty,
+  NForm, NFormItem, NInput, NInputNumber, NSelect, NUpload, NEmpty,
   NTabs, NTabPane, NProgress, useMessage, type DataTableColumns, type UploadFileInfo
 } from 'naive-ui';
 import { projectsApi, PROJECT_DOCUMENT_TYPES, formatBudget, approvalStatusLabel } from '@/api/projects';
@@ -11,6 +11,7 @@ import type { ProjectDetail, ProjectStaffOption } from '@/api/projects';
 import { subcontractorsApi, type Subcontractor } from '@/api/subcontractors';
 import { toApiError, apiClient } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
+import AppDrawer from '@/components/AppDrawer.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -428,7 +429,7 @@ onMounted(async () => {
       </NTabPane>
     </NTabs>
 
-    <NModal v-model:show="showEdit" preset="card" title="Редактирование проекта" style="width:560px">
+    <AppDrawer v-model:show="showEdit" title="Редактирование проекта" width="medium">
       <NForm @submit.prevent="saveEdit">
         <NFormItem label="Название"><NInput v-model:value="editForm.name" /></NFormItem>
         <NFormItem label="Заказчик"><NInput v-model:value="editForm.customerName" /></NFormItem>
@@ -458,9 +459,9 @@ onMounted(async () => {
           <NButton type="primary" :loading="saving" @click="saveEdit">Сохранить</NButton>
         </NSpace>
       </NForm>
-    </NModal>
+    </AppDrawer>
 
-    <NModal v-model:show="showUpload" preset="card" title="Документ проекта" style="width:480px">
+    <AppDrawer v-model:show="showUpload" title="Документ проекта" width="narrow">
       <NForm @submit.prevent="submitUpload">
         <NFormItem label="Название"><NInput v-model:value="uploadName" /></NFormItem>
         <NFormItem label="Тип">
@@ -476,9 +477,9 @@ onMounted(async () => {
           <NButton type="primary" :loading="uploading" @click="submitUpload">Загрузить</NButton>
         </NSpace>
       </NForm>
-    </NModal>
+    </AppDrawer>
 
-    <NModal v-model:show="showAddSub" preset="card" title="Добавить субподрядчика" style="width:520px">
+    <AppDrawer v-model:show="showAddSub" title="Добавить субподрядчика" width="medium">
       <NForm @submit.prevent="submitAddSub">
         <NFormItem label="Субподрядчик">
           <NSelect
@@ -496,9 +497,9 @@ onMounted(async () => {
           <NButton type="primary" :loading="addingSub" @click="submitAddSub">Добавить</NButton>
         </NSpace>
       </NForm>
-    </NModal>
+    </AppDrawer>
 
-    <NModal v-model:show="showEditSub" preset="card" title="Вид деятельности" style="width:480px">
+    <AppDrawer v-model:show="showEditSub" title="Вид деятельности" width="narrow">
       <NForm @submit.prevent="saveEditSub">
         <NFormItem label="Субподрядчик">
           <NInput :value="editSubTarget?.name" disabled />
@@ -511,6 +512,6 @@ onMounted(async () => {
           <NButton type="primary" :loading="savingSub" @click="saveEditSub">Сохранить</NButton>
         </NSpace>
       </NForm>
-    </NModal>
+    </AppDrawer>
   </NSpace>
 </template>

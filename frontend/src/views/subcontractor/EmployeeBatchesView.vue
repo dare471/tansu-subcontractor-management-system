@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, h } from 'vue';
 import {
-  NCard, NSpace, NInput, NButton, NDataTable, NModal, NForm, NFormItem,
+  NCard, NSpace, NInput, NButton, NDataTable, NForm, NFormItem,
   NSelect, NPopconfirm, NTag, NAlert, NProgress, NEmpty, NEllipsis, useMessage,
   type DataTableColumns
 } from 'naive-ui';
@@ -10,6 +10,7 @@ import { employeesApi, type Employee } from '@/api/employees';
 import { authApi, type MyProject } from '@/api/auth';
 import { toApiError } from '@/api/client';
 import { formatEmployees } from '@/utils/format';
+import AppDrawer from '@/components/AppDrawer.vue';
 
 const msg = useMessage();
 
@@ -444,7 +445,7 @@ onMounted(async () => {
     </NCard>
     </div>
 
-    <NModal v-model:show="showCreate" preset="card" title="Новый пакет" style="width:480px">
+    <AppDrawer v-model:show="showCreate" title="Новый пакет" width="narrow">
       <NForm @submit.prevent="createBatch">
         <NFormItem label="Проект">
           <NSelect v-model:value="createForm.projectOid" :options="projectOptions" />
@@ -457,13 +458,12 @@ onMounted(async () => {
           <NButton type="primary" @click="createBatch">Создать</NButton>
         </NSpace>
       </NForm>
-    </NModal>
+    </AppDrawer>
 
-    <NModal
+    <AppDrawer
       v-model:show="showAddMembers"
-      preset="card"
       title="Добавить сотрудников"
-      style="width:min(720px,96vw)"
+      width="xl"
     >
       <NAlert v-if="!addLoading && !addCandidates.length" type="warning" :bordered="false" style="margin-bottom:12px">
         Нет доступных сотрудников для этого проекта.
@@ -486,6 +486,6 @@ onMounted(async () => {
           Добавить ({{ addSelected.length }})
         </NButton>
       </NSpace>
-    </NModal>
+    </AppDrawer>
   </div>
 </template>

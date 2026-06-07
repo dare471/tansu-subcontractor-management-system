@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, h } from 'vue';
 import {
-  NCard, NSpace, NInput, NButton, NDataTable, NModal, NForm, NFormItem,
+  NCard, NSpace, NInput, NButton, NDataTable, NForm, NFormItem,
   NSelect, NPopconfirm, NTag, NEllipsis, useMessage, type DataTableColumns
 } from 'naive-ui';
 import {
@@ -11,6 +11,7 @@ import {
 import { authApi, type MyProject } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
 import { toApiError } from '@/api/client';
+import AppDrawer from '@/components/AppDrawer.vue';
 
 const msg = useMessage();
 const auth = useAuthStore();
@@ -218,7 +219,7 @@ onMounted(async () => {
       </div>
     </NSpace>
 
-    <NModal v-model:show="showForm" preset="card" :title="editing ? 'Изменить заявку' : 'Новая заявка'" style="width:560px">
+    <AppDrawer v-model:show="showForm" :title="editing ? 'Изменить заявку' : 'Новая заявка'" width="medium">
       <NForm @submit.prevent="save">
         <NFormItem v-if="!editing" label="Проект">
           <NSelect v-model:value="form.projectOid" :options="projectOptions" />
@@ -237,6 +238,6 @@ onMounted(async () => {
           <NButton type="primary" @click="save">Сохранить</NButton>
         </NSpace>
       </NForm>
-    </NModal>
+    </AppDrawer>
   </NCard>
 </template>

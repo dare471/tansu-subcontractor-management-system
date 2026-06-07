@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, h } from 'vue';
 import {
-  NCard, NSpace, NButton, NDataTable, NModal, NInput, NAlert,
+  NCard, NSpace, NButton, NDataTable, NInput, NAlert,
   useMessage, type DataTableColumns
 } from 'naive-ui';
 import { photoReviewsApi, type PendingPhotoReview } from '@/api/photoReviews';
 import EmployeePhotoAvatar from '@/components/EmployeePhotoAvatar.vue';
 import { toApiError } from '@/api/client';
+import AppDrawer from '@/components/AppDrawer.vue';
 
 const msg = useMessage();
 const items = ref<PendingPhotoReview[]>([]);
@@ -127,11 +128,10 @@ onMounted(load);
       </div>
     </NSpace>
 
-    <NModal
+    <AppDrawer
       :show="!!decisionItem"
-      preset="card"
       :title="decisionMode === 'approve' ? 'Одобрить фото' : 'Отклонить фото'"
-      style="width:480px"
+      width="narrow"
       @update:show="(v) => { if (!v) decisionItem = null }"
     >
       <p v-if="decisionItem" style="margin:0 0 8px">
@@ -155,6 +155,6 @@ onMounted(load);
           {{ decisionMode === 'approve' ? 'Одобрить' : 'Отклонить' }}
         </NButton>
       </NSpace>
-    </NModal>
+    </AppDrawer>
   </NCard>
 </template>

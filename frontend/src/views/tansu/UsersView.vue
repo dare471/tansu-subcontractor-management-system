@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, h, computed, watch } from 'vue';
 import {
-  NCard, NSpace, NInput, NButton, NDataTable, NModal, NForm, NFormItem,
+  NCard, NSpace, NInput, NButton, NDataTable, NForm, NFormItem,
   NSelect, NSwitch, NTag, NAlert, NEmpty, useMessage, useDialog, type DataTableColumns
 } from 'naive-ui';
 import {
@@ -19,6 +19,7 @@ import { projectsApi, type Project } from '@/api/projects';
 import { zupApi, TANSU_COMPANY_OPTIONS, type ZupEmployee } from '@/api/zup';
 import { toApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
+import AppDrawer from '@/components/AppDrawer.vue';
 
 const auth = useAuthStore();
 const msg = useMessage();
@@ -531,7 +532,7 @@ onMounted(async () => { await Promise.all([load(), loadFilters()]); });
       </div>
     </NSpace>
 
-    <NModal v-model:show="showForm" preset="card" :title="createModalTitle" style="width:620px">
+    <AppDrawer v-model:show="showForm" :title="createModalTitle" width="wide">
       <NForm @submit.prevent="save">
         <template v-if="!editing && isGlobalAdmin && !employeeMode && !createSubcontractorUser">
           <NFormItem label="Компания">
@@ -629,13 +630,12 @@ onMounted(async () => { await Promise.all([load(), loadFilters()]); });
           <NButton type="primary" @click="save">Сохранить</NButton>
         </NSpace>
       </NForm>
-    </NModal>
+    </AppDrawer>
 
-    <NModal
+    <AppDrawer
       v-model:show="showBlockModal"
-      preset="card"
       :title="blockTarget?.isActive ? 'Блокировка' : 'Разблокировка'"
-      style="width:480px"
+      width="narrow"
     >
       <NSpace vertical>
         <NFormItem :label="blockTarget?.isActive ? 'Причина блокировки' : 'Комментарий'">
@@ -650,6 +650,6 @@ onMounted(async () => { await Promise.all([load(), loadFilters()]); });
           >{{ blockTarget?.isActive ? 'Заблокировать' : 'Разблокировать' }}</NButton>
         </NSpace>
       </NSpace>
-    </NModal>
+    </AppDrawer>
   </NCard>
 </template>
