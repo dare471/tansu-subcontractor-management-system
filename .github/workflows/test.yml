@@ -22,9 +22,11 @@ jobs:
         run: dotnet test backend/tests/Tansu.UnitTests/Tansu.UnitTests.csproj --no-restore --verbosity minimal
 
       - name: Integration tests
-        run: dotnet test backend/tests/Tansu.IntegrationTests/Tansu.IntegrationTests.csproj --no-restore --verbosity minimal
+        run: dotnet test backend/tests/Tansu.IntegrationTests/Tansu.IntegrationTests.csproj --no-restore --verbosity minimal --blame-hang-timeout 5m
         env:
           TZ: UTC
+          FaceVerify__BaseUrl: ""
+          Zup__BaseUrl: ""
 
   frontend:
     runs-on: ubuntu-latest

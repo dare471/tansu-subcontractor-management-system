@@ -16,6 +16,9 @@ public sealed class HttpZupEmployeeDirectory(
 {
     public async Task<IReadOnlyList<ZupEmployeeDto>> ListAsync(string employerCompany, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(options.Value.BaseUrl))
+            return Array.Empty<ZupEmployeeDto>();
+
         var company = TansuEmployerCompany.ZupQueryValue(employerCompany);
         var baseUrl = options.Value.BaseUrl.TrimEnd('/');
         var url = $"{baseUrl}/Employee/All?company={Uri.EscapeDataString(company)}";

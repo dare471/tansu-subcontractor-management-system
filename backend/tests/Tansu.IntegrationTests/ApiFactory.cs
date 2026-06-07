@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Tansu.Infrastructure.EmployeeDocuments;
 using Testcontainers.PostgreSql;
 
 namespace Tansu.IntegrationTests;
@@ -58,10 +62,28 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 ["Entra:TenantId"] = "",
                 ["Entra:Audience"] = "",
                 ["AccessPass:VerifyServiceKey"] = ApiTestContext.VerifyServiceKey,
+                ["FaceVerify:BaseUrl"] = "",
+                ["Zup:BaseUrl"] = "",
                 ["Zup:TenantId"] = "",
                 ["Zup:ClientId"] = "",
                 ["Zup:ClientSecret"] = ""
             });
         });
+        builder.ConfigureTestServices(services =>
+        {
+            foreach (var descriptor in services
+                         .Where(d => d.ServiceType == typeof(IHostedService)
+                                     && d.ImplementationType == typeof(DocumentExpiryNotificationHostedService))
+                         .ToList())
+            {
+                services.Remove(descriptor);
+            }
+        });
+    }
+
+    protected override void ConfigureClient(HttpClient client)
+    {
+        base.ConfigureClient(client);
+        client.Timeout = TimeSpan.FromMinutes(3);
     }
 }
