@@ -180,7 +180,7 @@ public sealed class ApiTestContext(ApiFactory factory)
         "auth.me-project-progress" => new { completionPercent = 10 },
         "employee-portal.login" => new { iin = "000000000000", password = "wrong" },
         "employees.issue-ppe" => new { itemType = "helmet" },
-        "photo-reviews.reject" => new { reason = "smoke test" },
+        "photo-reviews.reject" => new { reason = "test" },
         "employee-portal.submit-quiz" => new
         {
             answers = new Dictionary<string, string>

@@ -2,8 +2,10 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <RestoreEnablePackagePruning>false</RestoreEnablePackagePruning>
   </PropertyGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Tansu.Domain\Tansu.Domain.csproj" />
     <ProjectReference Include="..\..\src\Tansu.Application\Tansu.Application.csproj" />
@@ -12,8 +14,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.core" />
     <PackageReference Include="xunit.assert" />
     <PackageReference Include="xunit.extensibility.core" />
+    <PackageReference Include="xunit.extensibility.execution" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
