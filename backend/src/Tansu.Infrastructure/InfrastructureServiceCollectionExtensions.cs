@@ -74,7 +74,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddHttpClient<IZupEmployeeDirectory, HttpZupEmployeeDirectory>((sp, client) =>
         {
             var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ZupOptions>>().Value;
-            client.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/");
+            if (!string.IsNullOrWhiteSpace(opts.BaseUrl))
+                client.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(30);
         });
         services.AddSingleton<IHikAccessService, StubHikAccessService>();

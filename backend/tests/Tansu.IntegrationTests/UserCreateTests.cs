@@ -10,7 +10,7 @@ using Tansu.Infrastructure.Seeding;
 
 namespace Tansu.IntegrationTests;
 
-[Collection("Api")]
+[Collection("ApiScenario")]
 public class UserCreateTests(ApiFactory factory)
 {
     private readonly HttpClient _http = factory.CreateClient();

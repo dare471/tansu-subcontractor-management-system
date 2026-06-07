@@ -12,16 +12,15 @@ using Tansu.Infrastructure.Seeding;
 
 namespace Tansu.IntegrationTests;
 
-[Collection("Api")]
+[Collection("ApiScenario")]
 public class AuthFlowTests(ApiFactory factory)
 {
-    private readonly ApiFactory _factory = factory;
-    private readonly HttpClient _http = factory.CreateClient();
+    private HttpClient Http => factory.CreateClient();
 
     [Fact]
     public async Task Login_with_seed_credentials_succeeds_and_returns_must_change_flag()
     {
-        await using (var scope = _factory.Services.CreateAsyncScope())
+        await using (var scope = factory.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<TansuDbContext>();
             var user = await db.Users.FirstAsync(u =>
@@ -30,7 +29,7 @@ public class AuthFlowTests(ApiFactory factory)
             await db.SaveChangesAsync();
         }
 
-        var res = await _http.PostAsJsonAsync("/api/auth/login", new
+        var res = await Http.PostAsJsonAsync("/api/auth/login", new
         {
             email = DemoSeeder.SubcontractorEmail,
             password = DemoSeeder.SubcontractorTempPassword
@@ -46,7 +45,7 @@ public class AuthFlowTests(ApiFactory factory)
     [Fact]
     public async Task Login_with_invalid_password_returns_401()
     {
-        var res = await _http.PostAsJsonAsync("/api/auth/login", new
+        var res = await Http.PostAsJsonAsync("/api/auth/login", new
         {
             email = DemoSeeder.SubcontractorEmail,
             password = "nope"
@@ -57,7 +56,7 @@ public class AuthFlowTests(ApiFactory factory)
     [Fact]
     public async Task DevLogin_tansu_admin_succeeds_in_development()
     {
-        var res = await _http.PostAsJsonAsync("/api/auth/dev-login", new
+        var res = await Http.PostAsJsonAsync("/api/auth/dev-login", new
         {
             email = DemoSeeder.TansuAdminEmail
         });
@@ -73,7 +72,7 @@ public class AuthFlowTests(ApiFactory factory)
     [Fact]
     public async Task DevLogin_rejects_subcontractor_user()
     {
-        var res = await _http.PostAsJsonAsync("/api/auth/dev-login", new
+        var res = await Http.PostAsJsonAsync("/api/auth/dev-login", new
         {
             email = DemoSeeder.SubcontractorEmail
         });
@@ -88,7 +87,7 @@ public class AuthFlowTests(ApiFactory factory)
         const string newPassword = "NewPass1";
         var email = $"pwd-{Guid.NewGuid():N}@tansu.local";
 
-        await using var scope = _factory.Services.CreateAsyncScope();
+        await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<TansuDbContext>();
         var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
         var sub = await db.Subcontractors.FirstAsync();
@@ -105,19 +104,19 @@ public class AuthFlowTests(ApiFactory factory)
         });
         await db.SaveChangesAsync();
 
-        var loginRes = await _http.PostAsJsonAsync("/api/auth/login", new { email, password = tempPassword });
+        var loginRes = await Http.PostAsJsonAsync("/api/auth/login", new { email, password = tempPassword });
         loginRes.EnsureSuccessStatusCode();
         var loginBody = await loginRes.Content.ReadFromJsonAsync<LoginPayload>();
         var oldToken = loginBody!.AccessToken;
 
-        var blocked = await _http.SendAsync(new HttpRequestMessage(
+        var blocked = await Http.SendAsync(new HttpRequestMessage(
             HttpMethod.Get, "/api/auth/me/projects")
         {
             Headers = { Authorization = new AuthenticationHeaderValue("Bearer", oldToken) }
         });
         blocked.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-        var changeRes = await _http.SendAsync(new HttpRequestMessage(
+        var changeRes = await Http.SendAsync(new HttpRequestMessage(
             HttpMethod.Post, "/api/auth/change-password")
         {
             Headers = { Authorization = new AuthenticationHeaderValue("Bearer", oldToken) },
@@ -133,7 +132,7 @@ public class AuthFlowTests(ApiFactory factory)
         changeBody.AccessToken.Should().NotBe(oldToken);
         changeBody.MustChangePassword.Should().BeFalse();
 
-        var allowed = await _http.SendAsync(new HttpRequestMessage(
+        var allowed = await Http.SendAsync(new HttpRequestMessage(
             HttpMethod.Get, "/api/auth/me/projects")
         {
             Headers = { Authorization = new AuthenticationHeaderValue("Bearer", changeBody.AccessToken) }

@@ -30,6 +30,14 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Environment.SetEnvironmentVariable("Jwt__SigningKey", TestJwtSigningKey);
         Environment.SetEnvironmentVariable("Jwt__Issuer", TestJwtIssuer);
         Environment.SetEnvironmentVariable("Jwt__Audience", TestJwtAudience);
+        Environment.SetEnvironmentVariable("RabbitMq__Host", "");
+        Environment.SetEnvironmentVariable("FaceVerify__BaseUrl", "");
+        Environment.SetEnvironmentVariable("Zup__BaseUrl", "");
+        Environment.SetEnvironmentVariable("Zup__TenantId", "");
+        Environment.SetEnvironmentVariable("Zup__ClientId", "");
+        Environment.SetEnvironmentVariable("Zup__ClientSecret", "");
+        Environment.SetEnvironmentVariable("EmployeePortal__CredentialsLogPath", "");
+
         await _postgres.StartAsync();
         _postgresConnectionString = _postgres.GetConnectionString();
         Environment.SetEnvironmentVariable("ConnectionStrings__Postgres", _postgresConnectionString);
@@ -41,6 +49,13 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Environment.SetEnvironmentVariable("Jwt__SigningKey", null);
         Environment.SetEnvironmentVariable("Jwt__Issuer", null);
         Environment.SetEnvironmentVariable("Jwt__Audience", null);
+        Environment.SetEnvironmentVariable("RabbitMq__Host", null);
+        Environment.SetEnvironmentVariable("FaceVerify__BaseUrl", null);
+        Environment.SetEnvironmentVariable("Zup__BaseUrl", null);
+        Environment.SetEnvironmentVariable("Zup__TenantId", null);
+        Environment.SetEnvironmentVariable("Zup__ClientId", null);
+        Environment.SetEnvironmentVariable("Zup__ClientSecret", null);
+        Environment.SetEnvironmentVariable("EmployeePortal__CredentialsLogPath", null);
         await base.DisposeAsync();
         await _postgres.DisposeAsync();
     }
@@ -48,6 +63,14 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        builder.UseSetting("RabbitMq:Host", "");
+        builder.UseSetting("FaceVerify:BaseUrl", "");
+        builder.UseSetting("Zup:BaseUrl", "");
+        builder.UseSetting("Zup:TenantId", "");
+        builder.UseSetting("Zup:ClientId", "");
+        builder.UseSetting("Zup:ClientSecret", "");
+        builder.UseSetting("EmployeePortal:CredentialsLogPath", "");
+
         builder.ConfigureAppConfiguration((_, config) =>
         {
             var connectionString = _postgresConnectionString ?? _postgres.GetConnectionString();
@@ -66,7 +89,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 ["Zup:BaseUrl"] = "",
                 ["Zup:TenantId"] = "",
                 ["Zup:ClientId"] = "",
-                ["Zup:ClientSecret"] = ""
+                ["Zup:ClientSecret"] = "",
+                ["EmployeePortal:CredentialsLogPath"] = ""
             });
         });
         builder.ConfigureTestServices(services =>
@@ -84,6 +108,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     protected override void ConfigureClient(HttpClient client)
     {
         base.ConfigureClient(client);
-        client.Timeout = TimeSpan.FromMinutes(3);
+        client.Timeout = TimeSpan.FromSeconds(60);
+        client.DefaultRequestHeaders.ConnectionClose = true;
     }
+
 }

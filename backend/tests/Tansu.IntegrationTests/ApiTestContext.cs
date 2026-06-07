@@ -137,7 +137,10 @@ public sealed class ApiTestContext(ApiFactory factory)
         if (!string.IsNullOrEmpty(endpoint.Query))
             path += "?" + ResolveQuery(endpoint.Query, ids);
 
-        var request = new HttpRequestMessage(endpoint.Method, path);
+        var request = new HttpRequestMessage(endpoint.Method, path)
+        {
+            Headers = { ConnectionClose = true }
+        };
         await ApplyAuthAsync(request, endpoint.Auth);
         ApplyBody(request, endpoint);
 

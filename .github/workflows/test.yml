@@ -22,11 +22,16 @@ jobs:
         run: dotnet test backend/tests/Tansu.UnitTests/Tansu.UnitTests.csproj --no-restore --verbosity minimal
 
       - name: Integration tests
-        run: dotnet test backend/tests/Tansu.IntegrationTests/Tansu.IntegrationTests.csproj --no-restore --verbosity minimal --blame-hang-timeout 5m
+        run: dotnet test backend/tests/Tansu.IntegrationTests/Tansu.IntegrationTests.csproj --no-restore --verbosity minimal --blame-hang-timeout 2m
         env:
           TZ: UTC
+          RabbitMq__Host: ""
           FaceVerify__BaseUrl: ""
           Zup__BaseUrl: ""
+          Zup__TenantId: ""
+          Zup__ClientId: ""
+          Zup__ClientSecret: ""
+          EmployeePortal__CredentialsLogPath: ""
 
   frontend:
     runs-on: ubuntu-latest

@@ -6,7 +6,7 @@ namespace Tansu.IntegrationTests;
 /// <summary>
 /// Smoke-тест: каждый эндпоинт из <see cref="ApiEndpointCatalog"/> отвечает без ошибки 5xx.
 /// </summary>
-[Collection("Api")]
+[Collection("ApiSmoke")]
 public class ApiEndpointSmokeTests(ApiFactory factory)
 {
     private readonly ApiTestContext _ctx = new(factory);

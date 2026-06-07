@@ -1,7 +1,5 @@
 Pf## Summary
 
-<!-- Кратко: что сделано и зачем -->
-
 ## Test plan
 
 - [ ] Backend: при новых/изменённых эндпоинтах обновлён `ApiEndpointCatalog.cs` и `ExpectedCount`

@@ -12,7 +12,7 @@ using Tansu.Infrastructure.Seeding;
 
 namespace Tansu.IntegrationTests;
 
-[Collection("Api")]
+[Collection("ApiScenario")]
 public class ApprovalFlowTests(ApiFactory factory)
 {
     private readonly ApiFactory _factory = factory;
