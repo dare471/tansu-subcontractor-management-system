@@ -59,14 +59,6 @@ const allItems: NavItem[] = [
     permission: 'canManageApprovalMatrix'
   },
   {
-    name: 'document-matrix',
-    label: 'Матрица заявок',
-    icon: ClipboardOutline,
-    roles: ['TANSU'],
-    permission: 'canApproveEmployees',
-    disabled: true
-  },
-  {
     name: 'site-visit-journal',
     label: 'Журнал посещений',
     icon: TimeOutline,
@@ -85,6 +77,14 @@ const allItems: NavItem[] = [
     permission: 'canApproveEmployees'
   },
   { name: 'photo-reviews-inbox', label: 'Проверка фото', icon: IdCardOutline, roles: ['TANSU'], permission: 'canReviewPhotos' },
+  {
+    name: 'document-matrix',
+    label: 'Матрица заявок',
+    icon: ClipboardOutline,
+    roles: ['TANSU'],
+    permission: 'canApproveEmployees',
+    disabled: true
+  },
   {
     name: 'document-requests-inbox',
     label: 'Согласование заявок',
