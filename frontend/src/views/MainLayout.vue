@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, h } from 'vue';
 import { useRouter, useRoute, RouterView } from 'vue-router';
-import { NIcon, NAvatar, NDropdown } from 'naive-ui';
+import { NIcon, NAvatar, NDropdown, NTooltip } from 'naive-ui';
 import {
   HomeOutline, PeopleOutline, BusinessOutline, PersonCircleOutline,
   GitNetworkOutline, IdCardOutline, MailUnreadOutline, TimeOutline,
@@ -15,6 +15,8 @@ const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
 
+const COMING_SOON_TOOLTIP = 'Скоро будет доступно';
+
 type NavItem = {
   name: string;
   label: string;
@@ -22,6 +24,7 @@ type NavItem = {
   roles?: ('TANSU' | 'Subcontractor')[];
   permission?: keyof TansuPermissions;
   permissionAny?: (keyof TansuPermissions)[];
+  disabled?: boolean;
 };
 
 const allItems: NavItem[] = [
@@ -60,7 +63,8 @@ const allItems: NavItem[] = [
     label: 'Матрица заявок',
     icon: ClipboardOutline,
     roles: ['TANSU'],
-    permission: 'canApproveEmployees'
+    permission: 'canApproveEmployees',
+    disabled: true
   },
   {
     name: 'site-visit-journal',
@@ -86,7 +90,8 @@ const allItems: NavItem[] = [
     label: 'Согласование заявок',
     icon: DocumentTextOutline,
     roles: ['TANSU'],
-    permission: 'canApproveEmployees'
+    permission: 'canApproveEmployees',
+    disabled: true
   }
 ];
 
@@ -104,7 +109,10 @@ const items = computed(() =>
 
 const activeName = computed(() => route.name?.toString() ?? '');
 
-function go(name: string) { router.push({ name }); }
+function go(item: NavItem) {
+  if (item.disabled) return;
+  router.push({ name: item.name });
+}
 
 const userDropdown = [
   { label: 'Личный кабинет', key: 'profile', icon: () => h(NIcon, null, () => h(SettingsOutline)) },
@@ -158,16 +166,31 @@ const userRoleLabel = computed(() => {
       </div>
 
       <nav class="t-sidebar__nav">
-        <div
-          v-for="item in items"
-          :key="item.name"
-          class="t-sidebar__item"
-          :class="{ 't-sidebar__item--active': activeName === item.name }"
-          @click="go(item.name)"
-        >
-          <NIcon :component="item.icon" size="20" class="t-sidebar__icon" />
-          <span>{{ item.label }}</span>
-        </div>
+        <template v-for="item in items" :key="item.name">
+          <NTooltip v-if="item.disabled" placement="right" :delay="200">
+            <template #trigger>
+              <div
+                class="t-sidebar__item t-sidebar__item--disabled"
+                role="menuitem"
+                aria-disabled="true"
+              >
+                <NIcon :component="item.icon" size="20" class="t-sidebar__icon" />
+                <span>{{ item.label }}</span>
+              </div>
+            </template>
+            {{ COMING_SOON_TOOLTIP }}
+          </NTooltip>
+          <div
+            v-else
+            class="t-sidebar__item"
+            :class="{ 't-sidebar__item--active': activeName === item.name }"
+            role="menuitem"
+            @click="go(item)"
+          >
+            <NIcon :component="item.icon" size="20" class="t-sidebar__icon" />
+            <span>{{ item.label }}</span>
+          </div>
+        </template>
       </nav>
 
       <div style="padding:14px 20px;border-top:1px solid rgba(255,255,255,.05);color:rgba(255,255,255,.4);font-size:11px">

@@ -57,6 +57,10 @@ a:hover { text-decoration: underline; }
 }
 
 .t-sidebar__nav { padding: 16px 12px; flex: 1; overflow-y: auto; }
+.t-sidebar__nav .n-tooltip {
+  display: block;
+  width: 100%;
+}
 .t-sidebar__item {
   display: flex; align-items: center; gap: 12px;
   padding: 11px 14px; border-radius: 8px;
@@ -84,6 +88,15 @@ a:hover { text-decoration: underline; }
   width: 3px;
   background: var(--brand-orange);
   border-radius: 0 3px 3px 0;
+}
+.t-sidebar__item--disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  user-select: none;
+}
+.t-sidebar__item--disabled:hover {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
 }
 .t-sidebar__icon {
   width: 20px; height: 20px;
