@@ -21,6 +21,15 @@ public class AuthFlowTests(ApiFactory factory)
     [Fact]
     public async Task Login_with_seed_credentials_succeeds_and_returns_must_change_flag()
     {
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<TansuDbContext>();
+            var user = await db.Users.FirstAsync(u =>
+                u.Email.ToLower() == DemoSeeder.SubcontractorEmail.ToLower());
+            user.MustChangePassword = true;
+            await db.SaveChangesAsync();
+        }
+
         var res = await _http.PostAsJsonAsync("/api/auth/login", new
         {
             email = DemoSeeder.SubcontractorEmail,

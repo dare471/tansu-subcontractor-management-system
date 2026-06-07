@@ -26,8 +26,18 @@ public class ApprovalFlowTests(ApiFactory factory)
         var jwt = scope.ServiceProvider.GetRequiredService<IJwtTokenService>();
 
         var sub = await db.Subcontractors.FirstAsync();
-        var initiator = await db.Users.FirstAsync(u =>
-            u.UserType == UserType.Subcontractor && u.SubcontractorId == sub.Id);
+        var initiator = new User
+        {
+            FullName = "Инициатор согласования",
+            Position = "HR",
+            Email = $"init-{Guid.NewGuid():N}@example.kz",
+            UserType = UserType.Subcontractor,
+            SubcontractorId = sub.Id,
+            PasswordHash = hasher.Hash(DemoSeedData.SubcontractorTempPassword),
+            MustChangePassword = false,
+            IsActive = true
+        };
+        db.Users.Add(initiator);
 
         var approver1 = new User
         {
@@ -71,8 +81,6 @@ public class ApprovalFlowTests(ApiFactory factory)
         db.Employees.Add(employee);
         await db.SaveChangesAsync();
 
-        initiator.MustChangePassword = false;
-        await db.SaveChangesAsync();
         var initiatorToken = jwt.IssueLocalToken(initiator).AccessToken;
 
         var http = _factory.CreateClient();
