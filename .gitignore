@@ -10,6 +10,9 @@ obj/
 *.user
 *.suo
 .vs/
+*.binlog
+.dotnet/
+.nuget/
 
 # Node / Vue
 node_modules/

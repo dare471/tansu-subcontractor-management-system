@@ -73,10 +73,13 @@ public static class JwtSetup
             o.AddPolicy(AuthPolicies.TansuOnly, p =>
             {
                 p.RequireAuthenticatedUser();
-                p.AddAuthenticationSchemes(AuthSchemes.LocalJwt, AuthSchemes.Entra);
+                if (entra.IsConfigured)
+                    p.AddAuthenticationSchemes(AuthSchemes.LocalJwt, AuthSchemes.Entra);
+                else
+                    p.AddAuthenticationSchemes(AuthSchemes.LocalJwt);
                 p.RequireAssertion(ctx =>
                     string.Equals(ctx.User.FindFirst("user_type")?.Value, UserType.Tansu, StringComparison.Ordinal)
-                    || ctx.User.Identity?.AuthenticationType == AuthSchemes.Entra);
+                    || (entra.IsConfigured && ctx.User.Identity?.AuthenticationType == AuthSchemes.Entra));
             });
 
             o.AddPolicy(AuthPolicies.SubcontractorOnly, p =>

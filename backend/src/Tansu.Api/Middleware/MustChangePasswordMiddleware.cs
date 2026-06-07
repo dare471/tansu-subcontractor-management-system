@@ -22,8 +22,7 @@ public sealed class MustChangePasswordMiddleware(RequestDelegate next)
         if (currentUser.IsAuthenticated && currentUser.MustChangePassword)
         {
             var path = ctx.Request.Path.Value ?? string.Empty;
-            var allowed = AllowedPaths.Any(a =>
-                path.StartsWith(a, StringComparison.OrdinalIgnoreCase));
+            var allowed = IsAllowedPath(path);
 
             if (!allowed)
             {
@@ -43,4 +42,8 @@ public sealed class MustChangePasswordMiddleware(RequestDelegate next)
 
         await next(ctx);
     }
+
+    private static bool IsAllowedPath(string path) =>
+        AllowedPaths.Any(a => string.Equals(path, a, StringComparison.OrdinalIgnoreCase))
+        || path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase);
 }

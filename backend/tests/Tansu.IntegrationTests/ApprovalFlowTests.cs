@@ -12,7 +12,8 @@ using Tansu.Infrastructure.Seeding;
 
 namespace Tansu.IntegrationTests;
 
-public class ApprovalFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
+[Collection("Api")]
+public class ApprovalFlowTests(ApiFactory factory)
 {
     private readonly ApiFactory _factory = factory;
 
@@ -63,7 +64,9 @@ public class ApprovalFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
         {
             SubcontractorId = sub.Id, ProjectOid = DemoSeeder.DemoProjectOid,
             FullName = "Айдос Нұрланов", Position = "Монтажник", Phone = "+7 771 482 9156",
-            Iin = "880512301456"
+            Iin = "880512301456",
+            PhotoPath = "demo/approval-flow.jpg",
+            PhotoReviewStatus = EmployeePhotoReviewStatus.Approved
         };
         db.Employees.Add(employee);
         await db.SaveChangesAsync();

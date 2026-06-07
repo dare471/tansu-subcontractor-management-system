@@ -12,7 +12,8 @@ using Tansu.Infrastructure.Seeding;
 
 namespace Tansu.IntegrationTests;
 
-public class AuthFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
+[Collection("Api")]
+public class AuthFlowTests(ApiFactory factory)
 {
     private readonly ApiFactory _factory = factory;
     private readonly HttpClient _http = factory.CreateClient();

@@ -10,7 +10,8 @@ using Tansu.Infrastructure.Seeding;
 
 namespace Tansu.IntegrationTests;
 
-public class UserCreateTests(ApiFactory factory) : IClassFixture<ApiFactory>
+[Collection("Api")]
+public class UserCreateTests(ApiFactory factory)
 {
     private readonly HttpClient _http = factory.CreateClient();
 
@@ -131,6 +132,8 @@ public class UserCreateTests(ApiFactory factory) : IClassFixture<ApiFactory>
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return req;
     }
+
+    private sealed record LoginPayload(string AccessToken);
 
     private sealed record CreateUserPayload(CreateUserDto User, string? TemporaryPassword);
 
