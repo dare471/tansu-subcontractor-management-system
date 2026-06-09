@@ -51,7 +51,7 @@ const columns = [
   { title: 'Дата', key: 'occurredAt', width: 150, render: (r: SiteIncident) => new Date(r.occurredAt).toLocaleString('ru-RU') },
   { title: 'Название', key: 'title' },
   {
-    title: 'Серьёзность', key: 'severity', width: 110,
+    title: 'Значимость', key: 'severity', width: 110,
     render: (r: SiteIncident) => h(NTag, { size: 'small' }, () => r.severity)
   },
   {
@@ -190,7 +190,7 @@ onMounted(async () => {
       <NFormItem label="Описание" required>
         <NInput v-model:value="createForm.description" type="textarea" :rows="4" placeholder="Подробности" />
       </NFormItem>
-      <NFormItem label="Серьёзность">
+      <NFormItem label="Значимость">
         <NSelect v-model:value="createForm.severity" :options="severityOptions" />
       </NFormItem>
       <NFormItem>
