@@ -10,11 +10,13 @@ import {
   type EmployeePortalDashboard
 } from '@/api/employeePortal';
 import { toApiError } from '@/api/client';
+import { useOfflineQrStore } from '@/stores/offlineQr';
 
 const router = useRouter();
 const msg = useMessage();
 const data = ref<EmployeePortalDashboard | null>(null);
 const qrUrl = ref<string | null>(null);
+const offlineQr = useOfflineQrStore();
 const loading = ref(true);
 const qrFullscreen = ref(false);
 
@@ -28,8 +30,13 @@ async function load() {
   loading.value = true;
   try {
     data.value = await employeePortalApi.dashboard();
-    if (qrUrl.value) URL.revokeObjectURL(qrUrl.value);
-    qrUrl.value = data.value.canShowQrPass ? await employeePortalApi.qrBlob() : null;
+    if (qrUrl.value?.startsWith('blob:')) URL.revokeObjectURL(qrUrl.value);
+    if (data.value.canShowQrPass && data.value.accessPass) {
+      await offlineQr.saveFromDashboard(data.value.accessPass);
+      qrUrl.value = await offlineQr.generateOnline(data.value.accessPass.verifyUrl);
+    } else {
+      qrUrl.value = await offlineQr.loadValid();
+    }
   } catch (e) {
     msg.error(toApiError(e).detail);
   } finally {

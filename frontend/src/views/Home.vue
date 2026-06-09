@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, h } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { NIcon, NSpace, NTag, NEmpty, NSpin } from 'naive-ui';
 import {
@@ -28,10 +28,10 @@ const employeesRejected = ref(0);
 const inbox = ref<InboxItem[]>([]);
 
 const greeting = computed(() => {
-  const h = new Date().getHours();
-  if (h < 6) return 'Доброй ночи';
-  if (h < 12) return 'Доброе утро';
-  if (h < 18) return 'Добрый день';
+  const hour = new Date().getHours();
+  if (hour < 6) return 'Доброй ночи';
+  if (hour < 12) return 'Доброе утро';
+  if (hour < 18) return 'Добрый день';
   return 'Добрый вечер';
 });
 
@@ -76,7 +76,9 @@ onMounted(async () => {
       await loadTansu();
     }
     if (auth.isSubcontractor) await loadSubcontractor();
-  } finally { loading.value = false; }
+  } finally {
+    loading.value = false;
+  }
 });
 
 const tansuQuickActions = [
@@ -90,14 +92,16 @@ const tansuQuickActions = [
   { label: 'Матрица согласования', icon: GitNetworkOutline, to: 'matrix', permission: 'canManageApprovalMatrix' as const },
   { label: 'Зарегистрировать проект', icon: BusinessOutline, to: 'projects', permission: 'canManageProjects' as const },
   { label: 'Согласование', icon: MailUnreadOutline, to: 'approvals-inbox', permission: 'canApproveEmployees' as const },
-  { label: 'Журнал посещений', icon: BusinessOutline, to: 'site-visit-journal', permission: 'canViewVisitJournal' as const }
+  { label: 'Журнал посещений', icon: BusinessOutline, to: 'site-visit-journal', permission: 'canViewVisitJournal' as const },
+  { label: 'Отчёты', icon: DocumentTextOutline, to: 'reports', permission: 'canViewReports' as const }
 ];
 
 const subQuickActions = [
   { label: 'Добавить сотрудника', icon: AddCircleOutline, to: 'employees' },
   { label: 'Пакеты согласования', icon: IdCardOutline, to: 'employee-batches' },
   { label: 'Отчётность по проектам', icon: BusinessOutline, to: 'project-progress' },
-  { label: 'Новая заявка', icon: DocumentTextOutline, to: 'document-requests' }
+  { label: 'Новая заявка', icon: DocumentTextOutline, to: 'document-requests' },
+  { label: 'Отчёты', icon: DocumentTextOutline, to: 'reports' }
 ];
 
 const quickActions = computed(() => {
@@ -113,18 +117,6 @@ const quickActions = computed(() => {
     return true;
   });
 });
-
-function statusTag(status: string | null) {
-  if (!status) return h(NTag, {}, () => 'Черновик');
-  const map: Record<string, { type: any; label: string }> = {
-    approved: { type: 'success', label: 'Согласован' },
-    rejected: { type: 'error', label: 'Отклонён' },
-    pending: { type: 'warning', label: 'На согласовании' },
-    skipped: { type: 'default', label: 'Пропущен' }
-  };
-  const m = map[status] ?? { type: 'default' as const, label: status };
-  return h(NTag, { type: m.type }, () => m.label);
-}
 </script>
 
 <template>

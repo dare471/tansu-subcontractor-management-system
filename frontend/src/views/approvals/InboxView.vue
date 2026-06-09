@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, h } from 'vue';
 import {
-  NCard, NSpace, NButton, NDataTable, NInput, NAlert,
+  NCard, NSpace, NButton, NDataTable, NInput, NAlert, NTag,
   useMessage, type DataTableColumns
 } from 'naive-ui';
 import { approvalsApi, type InboxItem } from '@/api/approvals';
@@ -52,7 +52,16 @@ async function confirm() {
   finally { submitting.value = false; }
 }
 
-const TABLE_SCROLL_X = 1100;
+function slaTag(row: InboxItem) {
+  if (row.pendingDays == null) return null;
+  const type = row.isEscalated ? 'error' : row.pendingDays >= 3 ? 'warning' : 'default';
+  const label = row.isEscalated
+    ? `Эскалация · ${row.pendingDays} дн.`
+    : `${row.pendingDays} дн. в ожидании`;
+  return h(NTag, { size: 'small', type }, () => label);
+}
+
+const TABLE_SCROLL_X = 1280;
 
 const columns: DataTableColumns<InboxItem> = [
   {
@@ -78,10 +87,25 @@ const columns: DataTableColumns<InboxItem> = [
   },
   { title: 'Шаг', key: 'orderNo', width: 72, align: 'center' },
   {
+    title: 'SLA', key: 'pendingDays', width: 150,
+    render: (r) => slaTag(r) ?? '—'
+  },
+  {
+    title: 'Замещение', key: 'actingForApproverName', width: 160,
+    ellipsis: { tooltip: true },
+    render: (r) => r.actingForApproverName ? `за ${r.actingForApproverName}` : '—'
+  },
+  {
     title: 'Действия', key: 'a', width: 240,
     render: (row) => h(NSpace, { size: 'small' }, () => [
-      h(NButton, { size: 'small', type: 'success', onClick: () => openApprove(row) }, () => 'Согласовать'),
-      h(NButton, { size: 'small', type: 'error', onClick: () => openReject(row) }, () => 'Отклонить')
+      h(NButton, {
+        size: 'small', type: 'success', disabled: !row.canAct,
+        onClick: () => openApprove(row)
+      }, () => 'Согласовать'),
+      h(NButton, {
+        size: 'small', type: 'error', disabled: !row.canAct,
+        onClick: () => openReject(row)
+      }, () => 'Отклонить')
     ])
   }
 ];

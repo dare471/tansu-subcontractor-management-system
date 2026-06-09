@@ -13,6 +13,10 @@ export type InboxItem = {
   submittedAt: string;
   batchId: string | null;
   batchTitle: string | null;
+  pendingDays: number | null;
+  isEscalated: boolean;
+  actingForApproverName: string | null;
+  canAct: boolean;
 };
 
 export const approvalsApi = {

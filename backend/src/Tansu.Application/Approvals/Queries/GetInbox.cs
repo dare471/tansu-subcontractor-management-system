@@ -19,17 +19,13 @@ public sealed class GetInboxHandler(
         var userId = currentUser.UserId ?? throw new UnauthorizedException();
         var access = await accessService.GetAccessAsync(ct);
 
-        var pending = await db.ApprovalSheet.AsNoTracking()
-            .Where(a => a.ApproverUserId == userId && a.Status == ApprovalStatus.Pending)
-            .ToListAsync(ct);
-
-        if (pending.Count == 0) return Array.Empty<InboxItemDto>();
-
-        var batchIds = pending
-            .Where(a => a.BatchId.HasValue)
+        var batchIds = await db.ApprovalSheet.AsNoTracking()
+            .Where(a => a.Status == ApprovalStatus.Pending &&
+                        (a.ApproverUserId == userId || a.ActingForUserId == userId) &&
+                        a.BatchId != null)
             .Select(a => a.BatchId!.Value)
             .Distinct()
-            .ToList();
+            .ToListAsync(ct);
 
         var batches = batchIds.Count == 0
             ? new Dictionary<Guid, (string Title, DateTimeOffset SubmittedAt)>()
@@ -40,20 +36,30 @@ public sealed class GetInboxHandler(
                     b => (Title: b.Title, SubmittedAt: b.SubmittedAt ?? b.CreatedAt),
                     ct);
 
-        var byRound = pending.GroupBy(a => new { a.EmployeeId, a.RoundId });
+        var roundKeys = await db.ApprovalSheet.AsNoTracking()
+            .Where(a => a.Status == ApprovalStatus.Pending &&
+                        (a.ApproverUserId == userId || a.ActingForUserId == userId))
+            .Select(a => new { a.EmployeeId, a.RoundId })
+            .Distinct()
+            .ToListAsync(ct);
+
+        if (roundKeys.Count == 0) return Array.Empty<InboxItemDto>();
+
         var currentSteps = new List<InboxItemDto>();
 
-        foreach (var grp in byRound)
+        foreach (var key in roundKeys)
         {
             var earliest = await db.ApprovalSheet.AsNoTracking()
-                .Where(a => a.EmployeeId == grp.Key.EmployeeId &&
-                            a.RoundId == grp.Key.RoundId &&
+                .Where(a => a.EmployeeId == key.EmployeeId &&
+                            a.RoundId == key.RoundId &&
                             a.Status == ApprovalStatus.Pending)
                 .OrderBy(a => a.OrderNo)
                 .FirstAsync(ct);
 
-            var mine = grp.FirstOrDefault(g => g.Id == earliest.Id);
-            if (mine is null) continue;
+            if (earliest.ApproverUserId != userId && earliest.ActingForUserId != userId)
+                continue;
+
+            var mine = earliest;
 
             var employee = await db.Employees.AsNoTracking()
                 .Include(e => e.Subcontractor)
@@ -73,11 +79,24 @@ public sealed class GetInboxHandler(
                 submittedAt = batchInfo.SubmittedAt;
             }
 
+            var (pendingDays, isEscalated) = await ApprovalSlaHelper.ComputeAsync(
+                db, mine.AssignedAt ?? mine.CreatedAt, mine.EscalatedAt, ct);
+            string? actingForName = null;
+            if (mine.ActingForUserId is Guid delegatorId)
+            {
+                actingForName = await db.Users.AsNoTracking()
+                    .Where(u => u.Id == delegatorId)
+                    .Select(u => u.FullName)
+                    .FirstOrDefaultAsync(ct);
+            }
+
             currentSteps.Add(new InboxItemDto(
                 mine.Id, employee.Id, employee.FullName, employee.Position,
                 employee.SubcontractorId, employee.Subcontractor!.Name,
                 employee.ProjectOid, employee.Project?.Name,
-                mine.OrderNo, submittedAt, batchId, batchTitle));
+                mine.OrderNo, submittedAt, batchId, batchTitle,
+                pendingDays, isEscalated, actingForName,
+                mine.ApproverUserId == userId));
         }
 
         return currentSteps

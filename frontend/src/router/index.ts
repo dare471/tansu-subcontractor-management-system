@@ -110,6 +110,24 @@ const routes: RouteRecordRaw[] = [
         meta: { roles: ['TANSU'], permission: 'canViewVisitJournal' }
       },
       {
+        path: 'audit-log',
+        name: 'audit-log',
+        component: () => import('@/views/tansu/AuditLogView.vue'),
+        meta: { roles: ['TANSU'], permission: 'canViewAuditLog' }
+      },
+      {
+        path: 'reports',
+        name: 'reports',
+        component: () => import('@/views/tansu/ReportsView.vue'),
+        meta: { roles: ['TANSU', 'Subcontractor'], permission: 'canViewReports' }
+      },
+      {
+        path: 'incidents',
+        name: 'incidents',
+        component: () => import('@/views/tansu/IncidentsView.vue'),
+        meta: { roles: ['TANSU'], permission: 'canBlockEmployees' }
+      },
+      {
         path: 'photo-reviews/inbox',
         name: 'photo-reviews-inbox',
         component: () => import('@/views/tansu/PhotoReviewsInboxView.vue'),

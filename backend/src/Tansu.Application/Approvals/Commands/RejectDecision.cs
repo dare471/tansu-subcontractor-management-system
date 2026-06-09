@@ -6,6 +6,7 @@ using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Contracts.Messages;
 using Tansu.Domain.Enums;
+using System.Text.Json;
 
 namespace Tansu.Application.Approvals.Commands;
 
@@ -24,7 +25,8 @@ public sealed class RejectValidator : AbstractValidator<RejectCommand>
 public sealed class RejectHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
-    IPublishEndpoint publisher) : IRequestHandler<RejectCommand, Unit>
+    IPublishEndpoint publisher,
+    IAuditRecorder audit) : IRequestHandler<RejectCommand, Unit>
 {
     public async Task<Unit> Handle(RejectCommand req, CancellationToken ct)
     {
@@ -48,6 +50,11 @@ public sealed class RejectHandler(
             s.DecidedAt = skipTime;
         }
 
+        audit.Record(new AuditEntry(
+            AuditActions.EmployeeRejected, "employee", employee.Id,
+            $"Отклонён сотрудник {employee.FullName}",
+            JsonSerializer.Serialize(new { sheetId = sheet.Id, comment = sheet.Comment }),
+            employee.ProjectOid, employee.SubcontractorId));
         await db.SaveChangesAsync(ct);
 
         var approver = await db.Users.AsNoTracking().FirstAsync(u => u.Id == sheet.ApproverUserId, ct);

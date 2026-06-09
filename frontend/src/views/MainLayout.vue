@@ -65,6 +65,27 @@ const allItems: NavItem[] = [
     roles: ['TANSU'],
     permission: 'canViewVisitJournal'
   },
+  {
+    name: 'audit-log',
+    label: 'Журнал действий',
+    icon: ClipboardOutline,
+    roles: ['TANSU'],
+    permission: 'canViewAuditLog'
+  },
+  {
+    name: 'reports',
+    label: 'Отчёты',
+    icon: DocumentTextOutline,
+    roles: ['TANSU', 'Subcontractor'],
+    permission: 'canViewReports'
+  },
+  {
+    name: 'incidents',
+    label: 'Инциденты',
+    icon: MailUnreadOutline,
+    roles: ['TANSU'],
+    permission: 'canBlockEmployees'
+  },
   { name: 'employees', label: 'Сотрудники', icon: IdCardOutline, roles: ['Subcontractor'] },
   { name: 'employee-batches', label: 'Пакеты согласования', icon: ClipboardOutline, roles: ['Subcontractor'] },
   { name: 'project-progress', label: 'Отчётность', icon: BusinessOutline, roles: ['Subcontractor'] },

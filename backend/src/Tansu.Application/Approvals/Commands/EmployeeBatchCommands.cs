@@ -225,6 +225,8 @@ public sealed class SubmitEmployeeBatchHandler(
             var prepared = await EmployeeSubmitCore.PrepareSubmissionAsync(
                 db, employee, initiatorId, batch.Id, ct);
 
+            foreach (var sheet in prepared.Sheets)
+                await Delegations.DelegationResolver.ApplyToEmployeeSheetAsync(db, sheet, employee, ct);
             db.ApprovalSheet.AddRange(prepared.Sheets);
             firstPrepared ??= prepared;
 

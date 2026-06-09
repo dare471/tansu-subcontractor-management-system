@@ -12,7 +12,8 @@ public sealed record ApproveDocumentRequestCommand(Guid SheetId, string? Comment
 public sealed class ApproveDocumentRequestHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
-    IPublishEndpoint publisher) : IRequestHandler<ApproveDocumentRequestCommand, Unit>
+    IPublishEndpoint publisher,
+    IAuditRecorder audit) : IRequestHandler<ApproveDocumentRequestCommand, Unit>
 {
     public async Task<Unit> Handle(ApproveDocumentRequestCommand req, CancellationToken ct)
     {
@@ -31,6 +32,10 @@ public sealed class ApproveDocumentRequestHandler(
             .OrderBy(a => a.OrderNo)
             .FirstOrDefaultAsync(ct);
 
+        audit.Record(new AuditEntry(
+            AuditActions.DocumentRequestApproved, "document_request", request.Id,
+            $"Заявка согласована: {request.Title}",
+            ProjectOid: request.ProjectOid, SubcontractorId: request.SubcontractorId));
         await db.SaveChangesAsync(ct);
 
         var approver = await db.Users.AsNoTracking().FirstAsync(u => u.Id == sheet.ApproverUserId, ct);

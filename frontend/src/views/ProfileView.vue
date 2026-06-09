@@ -2,10 +2,12 @@
 import { ref, computed, onMounted } from 'vue';
 import {
   NCard, NSpace, NAvatar, NTag, NButton, NForm, NFormItem, NInput,
-  NAlert, NDescriptions, NDescriptionsItem, NDataTable, useMessage
+  NAlert, NDescriptions, NDescriptionsItem, NDataTable, NSelect, NDatePicker, useMessage
 } from 'naive-ui';
 import { useAuthStore } from '@/stores/auth';
 import { authApi, type MyProject } from '@/api/auth';
+import { delegationsApi, type ApproverDelegation } from '@/api/delegations';
+import { usersApi } from '@/api/users';
 import { approverRoleLabel } from '@/api/documentRequests';
 import { toApiError } from '@/api/client';
 import { appBrand } from '@/config/branding';
@@ -15,6 +17,10 @@ const msg = useMessage();
 
 const projects = ref<MyProject[]>([]);
 const projectsLoading = ref(false);
+const delegations = ref<ApproverDelegation[]>([]);
+const delegateUserId = ref<string | null>(null);
+const delegateValidTo = ref<number | null>(null);
+const tansuUsers = ref<{ label: string; value: string }[]>([]);
 
 const oldPwd = ref('');
 const newPwd = ref('');
@@ -87,9 +93,38 @@ async function changePassword() {
   }
 }
 
+async function loadDelegations() {
+  if (!auth.isTansu || !auth.permissions.canApproveEmployees) return;
+  try {
+    delegations.value = await delegationsApi.list();
+    const users = await usersApi.list();
+    tansuUsers.value = users
+      .filter((u) => u.userType === 'TANSU' && u.isActive)
+      .map((u) => ({ label: u.fullName, value: u.id }));
+  } catch (e) {
+    msg.error(toApiError(e).detail);
+  }
+}
+
+async function createDelegation() {
+  if (!delegateUserId.value || !delegateValidTo.value) return;
+  try {
+    await delegationsApi.create({
+      delegateUserId: delegateUserId.value,
+      validFrom: new Date().toISOString(),
+      validTo: new Date(delegateValidTo.value).toISOString()
+    });
+    msg.success('Замещение создано');
+    await loadDelegations();
+  } catch (e) {
+    msg.error(toApiError(e).detail);
+  }
+}
+
 onMounted(async () => {
   await auth.fetchMe();
   await loadProjects();
+  await loadDelegations();
 });
 </script>
 
@@ -124,6 +159,32 @@ onMounted(async () => {
           <NDescriptionsItem label="БИН">{{ user?.subcontractorBin ?? '—' }}</NDescriptionsItem>
         </template>
       </NDescriptions>
+    </NCard>
+
+    <NCard
+      v-if="auth.isTansu && auth.permissions.canApproveEmployees"
+      title="Замещение при согласовании"
+      :bordered="true"
+    >
+      <p style="margin-bottom:12px;color:var(--text-secondary)">
+        Назначьте коллегу, который будет согласовывать заявки в ваше отсутствие.
+      </p>
+      <NSpace>
+        <NSelect
+          v-model:value="delegateUserId"
+          :options="tansuUsers"
+          placeholder="Замещающий"
+          filterable
+          style="min-width:240px"
+        />
+        <NDatePicker v-model:value="delegateValidTo" type="datetime" placeholder="Действует до" />
+        <NButton type="primary" @click="createDelegation">Сохранить</NButton>
+      </NSpace>
+      <ul v-if="delegations.length" style="margin-top:16px">
+        <li v-for="d in delegations" :key="d.id">
+          {{ d.delegateName }} — до {{ new Date(d.validTo).toLocaleDateString('ru-RU') }}
+        </li>
+      </ul>
     </NCard>
 
     <NCard v-if="auth.isSubcontractor" title="Проекты организации" :bordered="true">

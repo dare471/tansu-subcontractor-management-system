@@ -236,7 +236,7 @@ const columns: DataTableColumns<Employee> = [
       if (r.photoReviewStatus === 'rejected' && r.photoReviewReason) {
         return h(NEllipsis, { style: { maxWidth: '140px' }, tooltip: true }, () => [
           tag,
-          h('div', { style: { fontSize: '11px', color: 'var(--n-error-color)', marginTop: '4px' } }, r.photoReviewReason)
+          h('div', { style: { fontSize: '11px', color: 'var(--n-error-color)', marginTop: '4px' } }, r.photoReviewReason ?? '')
         ]);
       }
       return tag;

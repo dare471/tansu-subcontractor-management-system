@@ -1,10 +1,21 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { NButton } from 'naive-ui';
+import { NButton, NSelect } from 'naive-ui';
 import { useAuthStore } from '@/stores/auth';
+import { useI18n } from 'vue-i18n';
+import { setLocale } from '@/i18n';
 
 const auth = useAuthStore();
+const { locale } = useI18n();
+const localeOptions = [
+  { label: 'Русский', value: 'ru' },
+  { label: 'Қазақша', value: 'kk' },
+  { label: 'English', value: 'en' }
+];
+function onLocale(v: 'ru' | 'kk' | 'en') {
+  setLocale(v);
+}
 const router = useRouter();
 const route = useRoute();
 
@@ -40,6 +51,13 @@ function logout() {
       <span class="app-header__brand">Tansu</span>
       <div class="app-header__user">
         <span class="app-header__name" :title="auth.user?.fullName">{{ auth.user?.fullName }}</span>
+        <NSelect
+          size="small"
+          :value="locale"
+          :options="localeOptions"
+          style="width: 110px"
+          @update:value="onLocale"
+        />
         <NButton size="small" quaternary @click="logout">Выйти</NButton>
       </div>
     </header>

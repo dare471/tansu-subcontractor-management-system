@@ -39,8 +39,19 @@ public static class EmployeePortalEndpoints
                 Results.Ok(await mediator.Send(new GetEmployeePortalApprovalsQuery(), ct)))
         .WithSummary("Статус и история согласования (только свой профиль).");
 
-        portal.MapGet("/site-visits", async (IMediator mediator, CancellationToken ct) =>
-                Results.Ok(await mediator.Send(new GetEmployeePortalSiteVisitsQuery(), ct)))
+        portal.MapGet("/site-visits", async (
+            [FromQuery] DateTimeOffset? from,
+            [FromQuery] DateTimeOffset? to,
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var p = page ?? 1;
+            var ps = pageSize ?? 50;
+            return Results.Ok(await mediator.Send(new GetEmployeePortalSiteVisitsQuery(
+                p <= 0 ? 1 : p, ps <= 0 ? 50 : ps, from, to), ct));
+        })
         .WithSummary("Журнал проходов на объект.");
 
         portal.MapGet("/ppe", async (IMediator mediator, CancellationToken ct) =>
@@ -91,8 +102,11 @@ public static class EmployeePortalEndpoints
         })
         .WithSummary("Фото сотрудника для Face ID.");
 
-        portal.MapGet("/safety-quiz", async (IMediator mediator, CancellationToken ct) =>
-                Results.Ok(await mediator.Send(new GetSafetyQuizQuery(), ct)))
+        portal.MapGet("/safety-quiz", async (
+            [FromQuery] string? locale,
+            IMediator mediator,
+            CancellationToken ct) =>
+                Results.Ok(await mediator.Send(new GetSafetyQuizQuery(locale), ct)))
         .WithSummary("Вопросы опроса по ТБ.");
 
         portal.MapPost("/safety-quiz", async (

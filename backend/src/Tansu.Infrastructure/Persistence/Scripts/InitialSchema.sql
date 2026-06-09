@@ -402,3 +402,105 @@ CREATE TABLE IF NOT EXISTS subcontract.subcontractor_documents (
 
 CREATE INDEX IF NOT EXISTS ix_subcontractor_documents_sub
     ON subcontract.subcontractor_documents (subcontractor_id, uploaded_at DESC);
+
+-- Audit log
+CREATE TABLE IF NOT EXISTS subcontract.audit_events (
+    id               uuid PRIMARY KEY,
+    occurred_at      timestamptz NOT NULL DEFAULT now(),
+    actor_user_id    uuid,
+    actor_email      varchar(256),
+    actor_type       varchar(32) NOT NULL DEFAULT 'system',
+    action           varchar(64) NOT NULL,
+    entity_type      varchar(64) NOT NULL,
+    entity_id        uuid NOT NULL,
+    project_oid      uuid,
+    subcontractor_id uuid,
+    summary          varchar(1000) NOT NULL,
+    payload_json     text,
+    correlation_id   varchar(128),
+    ip_address       varchar(64),
+    user_agent       varchar(512)
+);
+CREATE INDEX IF NOT EXISTS ix_audit_events_occurred ON subcontract.audit_events (occurred_at DESC);
+CREATE INDEX IF NOT EXISTS ix_audit_events_entity ON subcontract.audit_events (entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS ix_audit_events_actor ON subcontract.audit_events (actor_user_id);
+CREATE INDEX IF NOT EXISTS ix_audit_events_project ON subcontract.audit_events (project_oid);
+
+-- Delegation, SLA, incidents
+CREATE TABLE IF NOT EXISTS subcontract.approver_delegations (
+    id                  uuid PRIMARY KEY,
+    delegator_user_id   uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE RESTRICT,
+    delegate_user_id    uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE RESTRICT,
+    project_oid         uuid REFERENCES subcontract.project_refs(project_oid) ON DELETE CASCADE,
+    subcontractor_id    uuid REFERENCES subcontract.subcontractors(id) ON DELETE CASCADE,
+    approver_role       varchar(32),
+    valid_from          timestamptz NOT NULL,
+    valid_to            timestamptz NOT NULL,
+    is_active           boolean NOT NULL DEFAULT true,
+    created_by_user_id  uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE RESTRICT,
+    created_at          timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_approver_delegations_delegator ON subcontract.approver_delegations (delegator_user_id, is_active);
+CREATE INDEX IF NOT EXISTS ix_approver_delegations_delegate ON subcontract.approver_delegations (delegate_user_id, is_active);
+
+CREATE TABLE IF NOT EXISTS subcontract.approval_sla_policies (
+    id                      uuid PRIMARY KEY,
+    scope                   varchar(32) NOT NULL DEFAULT 'global',
+    project_oid             uuid REFERENCES subcontract.project_refs(project_oid) ON DELETE CASCADE,
+    request_type            varchar(32),
+    pending_days_warning    integer NOT NULL DEFAULT 2,
+    pending_days_escalation integer NOT NULL DEFAULT 3,
+    escalation_role         varchar(32),
+    escalation_user_id      uuid REFERENCES subcontract.users(id) ON DELETE SET NULL,
+    is_active               boolean NOT NULL DEFAULT true,
+    created_at              timestamptz NOT NULL DEFAULT now()
+);
+
+INSERT INTO subcontract.approval_sla_policies (id, scope, pending_days_warning, pending_days_escalation, escalation_role, is_active, created_at)
+SELECT 'a0000000-0000-4000-8000-000000000001', 'global', 2, 3, 'management', true, now()
+WHERE NOT EXISTS (SELECT 1 FROM subcontract.approval_sla_policies WHERE scope = 'global' AND is_active = true);
+
+ALTER TABLE subcontract.approval_sheet ADD COLUMN IF NOT EXISTS assigned_at timestamptz;
+ALTER TABLE subcontract.approval_sheet ADD COLUMN IF NOT EXISTS last_reminder_at timestamptz;
+ALTER TABLE subcontract.approval_sheet ADD COLUMN IF NOT EXISTS escalated_at timestamptz;
+ALTER TABLE subcontract.approval_sheet ADD COLUMN IF NOT EXISTS acting_for_user_id uuid;
+
+ALTER TABLE subcontract.document_approval_sheet ADD COLUMN IF NOT EXISTS assigned_at timestamptz;
+ALTER TABLE subcontract.document_approval_sheet ADD COLUMN IF NOT EXISTS last_reminder_at timestamptz;
+ALTER TABLE subcontract.document_approval_sheet ADD COLUMN IF NOT EXISTS escalated_at timestamptz;
+ALTER TABLE subcontract.document_approval_sheet ADD COLUMN IF NOT EXISTS acting_for_user_id uuid;
+
+ALTER TABLE subcontract.users ADD COLUMN IF NOT EXISTS notification_email varchar(320);
+
+CREATE TABLE IF NOT EXISTS subcontract.site_incidents (
+    id                   uuid PRIMARY KEY,
+    project_oid          uuid NOT NULL REFERENCES subcontract.project_refs(project_oid) ON DELETE RESTRICT,
+    occurred_at          timestamptz NOT NULL,
+    reported_by_user_id  uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE RESTRICT,
+    title                varchar(500) NOT NULL,
+    description          varchar(4000) NOT NULL,
+    severity             varchar(16) NOT NULL DEFAULT 'medium',
+    status               varchar(32) NOT NULL DEFAULT 'open',
+    subcontractor_id     uuid REFERENCES subcontract.subcontractors(id) ON DELETE SET NULL,
+    block_until_resolved boolean NOT NULL DEFAULT false,
+    resolution_notes     varchar(4000),
+    resolved_at          timestamptz,
+    resolved_by_user_id  uuid REFERENCES subcontract.users(id) ON DELETE SET NULL,
+    created_at           timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_site_incidents_project ON subcontract.site_incidents (project_oid);
+CREATE INDEX IF NOT EXISTS ix_site_incidents_status ON subcontract.site_incidents (status);
+
+CREATE TABLE IF NOT EXISTS subcontract.site_incident_employees (
+    incident_id uuid NOT NULL REFERENCES subcontract.site_incidents(id) ON DELETE CASCADE,
+    employee_id uuid NOT NULL REFERENCES subcontract.employees(id) ON DELETE CASCADE,
+    PRIMARY KEY (incident_id, employee_id)
+);
+
+CREATE TABLE IF NOT EXISTS subcontract.site_incident_comments (
+    id              uuid PRIMARY KEY,
+    incident_id     uuid NOT NULL REFERENCES subcontract.site_incidents(id) ON DELETE CASCADE,
+    author_user_id  uuid NOT NULL REFERENCES subcontract.users(id) ON DELETE RESTRICT,
+    body            varchar(4000) NOT NULL,
+    created_at      timestamptz NOT NULL DEFAULT now()
+);

@@ -40,6 +40,8 @@ public sealed record EmployeePortalSiteVisitItemDto(
     Guid Id,
     string? ProjectName,
     DateTimeOffset CheckedInAt,
+    DateTimeOffset? CheckedOutAt,
+    string? TerminalLocation,
     double? FaceConfidence,
     string VerificationMethod);
 
@@ -49,7 +51,10 @@ public sealed record EmployeePortalPassDto(
     Guid Id,
     string VerifyUrl,
     DateTimeOffset IssuedAt,
-    bool HasReferencePhoto);
+    bool HasReferencePhoto,
+    DateTimeOffset QrValidUntil,
+    string PassStatus,
+    string EmployeeBlockStatus);
 
 public sealed record SafetyQuizQuestionDto(
     string Id,

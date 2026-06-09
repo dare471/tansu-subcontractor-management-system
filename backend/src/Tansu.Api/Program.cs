@@ -15,12 +15,14 @@ builder.Services.AddTansuApplication(builder.Configuration);
 builder.Services.AddTansuMessaging(builder.Configuration);
 builder.Services.AddTansuAuth(builder.Configuration);
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUserAccessor>();
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
     .AllowAnyOrigin()
     .AllowAnyHeader()
-    .AllowAnyMethod()));
+    .AllowAnyMethod()
+    .WithExposedHeaders("Content-Disposition")));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
@@ -28,6 +30,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 
 builder.Services.AddHostedService<Tansu.Infrastructure.EmployeeDocuments.DocumentExpiryNotificationHostedService>();
+builder.Services.AddHostedService<Tansu.Infrastructure.EmployeePortal.EmployeeQuizReminderHostedService>();
+builder.Services.AddHostedService<Tansu.Infrastructure.Approvals.ApprovalSlaMonitorHostedService>();
 
 var app = builder.Build();
 
@@ -48,6 +52,7 @@ await using (var scope = app.Services.CreateAsyncScope())
         await DemoTansuRolesSeeder.EnsureAsync(scope.ServiceProvider);
         await DemoProjectDetailsSeeder.EnsureAsync(scope.ServiceProvider);
         await DemoUiDataSeeder.EnsureAsync(scope.ServiceProvider);
+        await DemoDashboardSeeder.EnsureAsync(scope.ServiceProvider);
     }
 }
 
@@ -76,6 +81,10 @@ app.MapEmployeePortalEndpoints();
 app.MapApprovalEndpoints();
 app.MapEmployeeBatchEndpoints();
 app.MapDocumentRequestEndpoints();
+app.MapAuditEndpoints();
+app.MapReportEndpoints();
+app.MapDelegationEndpoints();
+app.MapIncidentEndpoints();
 
 app.Run();
 

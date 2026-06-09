@@ -32,7 +32,8 @@ public sealed class SetMatrixValidator : AbstractValidator<SetMatrixCommand>
 public sealed class SetMatrixHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
-    ITansuAccessService accessService) : IRequestHandler<SetMatrixCommand, IReadOnlyList<MatrixStepDto>>
+    ITansuAccessService accessService,
+    IAuditRecorder audit) : IRequestHandler<SetMatrixCommand, IReadOnlyList<MatrixStepDto>>
 {
     public async Task<IReadOnlyList<MatrixStepDto>> Handle(SetMatrixCommand req, CancellationToken ct)
     {
@@ -81,6 +82,10 @@ public sealed class SetMatrixHandler(
             inserted.Add(entry);
         }
 
+        audit.Record(new AuditEntry(
+            AuditActions.MatrixUpdated, "approval_matrix", req.ProjectOid,
+            $"Матрица согласования обновлена ({req.Steps.Count} шагов)",
+            ProjectOid: req.ProjectOid, SubcontractorId: req.SubcontractorId));
         await db.SaveChangesAsync(ct);
 
         return inserted

@@ -28,6 +28,9 @@ export type DocumentRequestInboxItem = {
   approverRole: string;
   orderNo: number;
   submittedAt: string;
+  pendingDays: number | null;
+  isEscalated: boolean;
+  canAct: boolean;
 };
 
 export const REQUEST_TYPES = [

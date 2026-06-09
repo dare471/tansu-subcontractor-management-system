@@ -26,7 +26,10 @@ public sealed record DocumentRequestInboxItemDto(
     string? ProjectName,
     string ApproverRole,
     int OrderNo,
-    DateTimeOffset SubmittedAt);
+    DateTimeOffset SubmittedAt,
+    int? PendingDays,
+    bool IsEscalated,
+    bool CanAct);
 
 public sealed record DocumentApprovalStepDto(
     Guid Id,

@@ -1,17 +1,21 @@
 import { approvalsApi } from './approvals';
+import { auditApi } from './audit';
 import { authApi } from './auth';
+import { delegationsApi } from './delegations';
 import { documentMatrixApi, documentRequestsApi } from './documentRequests';
 import { employeeBatchesApi } from './employeeBatches';
 import { employeesApi } from './employees';
+import { incidentsApi } from './incidents';
 import { matrixApi } from './matrix';
 import { photoReviewsApi } from './photoReviews';
 import { projectsApi } from './projects';
+import { reportsApi } from './reports';
 import { siteVisitJournalApi } from './siteVisitJournal';
 import { subcontractorsApi } from './subcontractors';
 import { usersApi } from './users';
 import { zupApi } from './zup';
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export type ApiRouteEntry =
   | {
@@ -29,7 +33,7 @@ export type ApiRouteEntry =
     };
 
 /** При добавлении метода в src/api/*.ts — добавьте запись сюда. */
-export const EXPECTED_API_ROUTE_COUNT = 87;
+export const EXPECTED_API_ROUTE_COUNT = 100;
 
 const sampleId = '00000000-0000-4000-8000-000000000001';
 const sampleProjectOid = '00000000-0000-4000-8000-000000000002';
@@ -505,6 +509,95 @@ export const apiRouteRegistry: ApiRouteEntry[] = [
     method: 'GET',
     pathPattern: /^\/api\/site-visit-journal\/export$/,
     invoke: () => siteVisitJournalApi.exportFile('pdf')
+  },
+
+  // audit
+  { id: 'audit.list', kind: 'http', method: 'GET', pathPattern: /^\/api\/audit-events$/, invoke: () => auditApi.list({ page: 1 }) },
+
+  // reports
+  { id: 'reports.compliance', kind: 'http', method: 'GET', pathPattern: /^\/api\/reports\/subcontractor-compliance$/, invoke: () => reportsApi.compliance() },
+  {
+    id: 'reports.exportApprovedPersonnel',
+    kind: 'http',
+    method: 'GET',
+    pathPattern: /^\/api\/reports\/approved-personnel\/export$/,
+    invoke: () => reportsApi.exportApprovedPersonnel('csv')
+  },
+  {
+    id: 'reports.exportSiteVisits',
+    kind: 'http',
+    method: 'GET',
+    pathPattern: /^\/api\/reports\/site-visits\/export$/,
+    invoke: () => reportsApi.exportSiteVisits('csv')
+  },
+  {
+    id: 'reports.exportBlocks',
+    kind: 'http',
+    method: 'GET',
+    pathPattern: /^\/api\/reports\/employee-blocks\/export$/,
+    invoke: () => reportsApi.exportBlocks('csv')
+  },
+  {
+    id: 'reports.exportDocumentRequests',
+    kind: 'http',
+    method: 'GET',
+    pathPattern: /^\/api\/reports\/document-requests\/export$/,
+    invoke: () => reportsApi.exportDocumentRequests('csv')
+  },
+  {
+    id: 'reports.exportExpiringDocuments',
+    kind: 'http',
+    method: 'GET',
+    pathPattern: /^\/api\/reports\/expiring-documents\/export$/,
+    invoke: () => reportsApi.exportExpiringDocuments('csv', 14)
+  },
+
+  // delegations
+  { id: 'delegations.list', kind: 'http', method: 'GET', pathPattern: /^\/api\/delegations$/, invoke: () => delegationsApi.list(true) },
+  {
+    id: 'delegations.create',
+    kind: 'http',
+    method: 'POST',
+    pathPattern: /^\/api\/delegations$/,
+    invoke: () =>
+      delegationsApi.create({
+        delegateUserId: sampleId,
+        validFrom: new Date().toISOString(),
+        validTo: new Date(Date.now() + 86400000).toISOString()
+      })
+  },
+  {
+    id: 'delegations.revoke',
+    kind: 'http',
+    method: 'DELETE',
+    pathPattern: new RegExp(`^/api/delegations/${sampleId}$`),
+    invoke: () => delegationsApi.revoke(sampleId)
+  },
+
+  // incidents
+  { id: 'incidents.list', kind: 'http', method: 'GET', pathPattern: /^\/api\/incidents$/, invoke: () => incidentsApi.list() },
+  {
+    id: 'incidents.create',
+    kind: 'http',
+    method: 'POST',
+    pathPattern: /^\/api\/incidents$/,
+    invoke: () =>
+      incidentsApi.create({
+        projectOid: sampleProjectOid,
+        occurredAt: new Date().toISOString(),
+        title: 't',
+        description: 'd',
+        severity: 'low',
+        blockUntilResolved: false,
+        employeeIds: []
+      })
+  },
+  {
+    id: 'incidents.updateStatus',
+    kind: 'http',
+    method: 'PATCH',
+    pathPattern: new RegExp(`^/api/incidents/${sampleId}$`),
+    invoke: () => incidentsApi.updateStatus(sampleId, 'resolved')
   },
 
   // zup

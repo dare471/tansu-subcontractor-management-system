@@ -12,7 +12,11 @@ public sealed record InboxItemDto(
     int OrderNo,
     DateTimeOffset SubmittedAt,
     Guid? BatchId,
-    string? BatchTitle);
+    string? BatchTitle,
+    int? PendingDays,
+    bool IsEscalated,
+    string? ActingForApproverName,
+    bool CanAct);
 
 public sealed record ApprovalBatchDto(
     Guid Id,

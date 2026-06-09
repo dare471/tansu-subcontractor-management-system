@@ -25,7 +25,9 @@ const defaultPermissions: TansuPermissions = {
   canViewSubcontractors: false,
   canReviewPhotos: false,
   isReadOnlyMonitoring: false,
-  isGlobalAdmin: false
+  isGlobalAdmin: false,
+  canViewAuditLog: false,
+  canViewReports: false
 };
 
 export const useAuthStore = defineStore('auth', {

@@ -324,9 +324,9 @@ onMounted(load);
 
       <NAlert v-if="blocks?.isBlocked" type="error" title="Сотрудник заблокирован">
         {{ blocks.lastRecord?.reason }}
-        <template #footer>
+        <div style="margin-top:8px;color:var(--n-text-color-3);font-size:13px">
           Доступ на объект отозван. Для восстановления необходимо повторное согласование.
-        </template>
+        </div>
       </NAlert>
 
       <NCard title="Документы" size="small" :bordered="true">
@@ -451,7 +451,9 @@ onMounted(load);
       <NForm @submit.prevent>
         <NFormItem label="Наименование"><NInput v-model:value="docForm.name" /></NFormItem>
         <NFormItem label="Тип"><NSelect v-model:value="docForm.documentType" :options="DOCUMENT_TYPES" /></NFormItem>
-        <NFormItem label="Срок действия"><NInput v-model:value="docForm.expiresAt" type="date" /></NFormItem>
+        <NFormItem label="Срок действия">
+          <input v-model="docForm.expiresAt" type="date" class="t-native-date-input" />
+        </NFormItem>
         <NFormItem label="Файл (PDF, JPG, PNG)">
           <NUpload accept=".pdf,.jpg,.jpeg,.png" :max="1" :show-file-list="false" :disabled="uploadingDoc" @change="onDocFileChange">
             <NButton :loading="uploadingDoc">Выбрать файл</NButton>

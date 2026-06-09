@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Contracts.Messages;
+using Tansu.Application.Delegations;
 using Tansu.Domain.Entities;
 using Tansu.Domain.Enums;
 
@@ -14,7 +15,8 @@ public sealed record SubmitDocumentRequestCommand(Guid RequestId) : IRequest<Gui
 public sealed class SubmitDocumentRequestHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
-    IPublishEndpoint publisher) : IRequestHandler<SubmitDocumentRequestCommand, Guid>
+    IPublishEndpoint publisher,
+    IAuditRecorder audit) : IRequestHandler<SubmitDocumentRequestCommand, Guid>
 {
     public async Task<Guid> Handle(SubmitDocumentRequestCommand req, CancellationToken ct)
     {
@@ -67,8 +69,15 @@ public sealed class SubmitDocumentRequestHandler(
             });
         }
 
+        foreach (var sheet in sheets)
+            await DelegationResolver.ApplyToDocumentSheetAsync(db, sheet, request, ct);
+
         request.UpdatedAt = DateTimeOffset.UtcNow;
         db.DocumentApprovalSheet.AddRange(sheets);
+        audit.Record(new AuditEntry(
+            AuditActions.DocumentRequestSubmitted, "document_request", request.Id,
+            $"Заявка отправлена: {request.Title}",
+            ProjectOid: request.ProjectOid, SubcontractorId: request.SubcontractorId));
         await db.SaveChangesAsync(ct);
 
         var first = sheets.OrderBy(s => s.OrderNo).First();

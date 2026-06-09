@@ -14,6 +14,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         e.Property(x => x.FullName).HasColumnName("full_name").HasMaxLength(500).IsRequired();
         e.Property(x => x.Position).HasColumnName("position").HasMaxLength(300).IsRequired();
         e.Property(x => x.Email).HasColumnName("email").HasMaxLength(320).IsRequired();
+        e.Property(x => x.NotificationEmail).HasColumnName("notification_email").HasMaxLength(320);
         e.Property(x => x.PasswordHash).HasColumnName("password_hash");
         e.Property(x => x.UserType).HasColumnName("user_type").HasMaxLength(32).IsRequired();
         e.Property(x => x.SubcontractorId).HasColumnName("subcontractor_id");

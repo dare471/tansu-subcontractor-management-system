@@ -21,7 +21,8 @@ public sealed class RejectDocumentRequestValidator : AbstractValidator<RejectDoc
 public sealed class RejectDocumentRequestHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
-    IPublishEndpoint publisher) : IRequestHandler<RejectDocumentRequestCommand, Unit>
+    IPublishEndpoint publisher,
+    IAuditRecorder audit) : IRequestHandler<RejectDocumentRequestCommand, Unit>
 {
     public async Task<Unit> Handle(RejectDocumentRequestCommand req, CancellationToken ct)
     {
@@ -46,6 +47,10 @@ public sealed class RejectDocumentRequestHandler(
             s.DecidedAt = skipTime;
         }
 
+        audit.Record(new AuditEntry(
+            AuditActions.DocumentRequestRejected, "document_request", request.Id,
+            $"Заявка отклонена: {request.Title}",
+            ProjectOid: request.ProjectOid, SubcontractorId: request.SubcontractorId));
         await db.SaveChangesAsync(ct);
 
         var approver = await db.Users.AsNoTracking().FirstAsync(u => u.Id == sheet.ApproverUserId, ct);

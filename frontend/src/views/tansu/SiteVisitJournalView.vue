@@ -155,8 +155,8 @@ onMounted(async () => {
           filterable
           style="width:220px"
         />
-        <NInput v-model:value="fromDate" type="date" placeholder="С" style="width:150px" />
-        <NInput v-model:value="toDate" type="date" placeholder="По" style="width:150px" />
+        <input v-model="fromDate" type="date" class="t-native-date-input" title="С" style="width:150px" />
+        <input v-model="toDate" type="date" class="t-native-date-input" title="По" style="width:150px" />
         <NButton type="primary" @click="() => { page = 1; load(); }">Найти</NButton>
         <NButton @click="resetFilters">Сбросить</NButton>
         <NButton :loading="exporting === 'excel'" @click="exportJournal('excel')">Excel</NButton>

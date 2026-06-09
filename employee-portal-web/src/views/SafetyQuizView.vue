@@ -3,8 +3,11 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { NRadioGroup, NRadio, NButton, NAlert, useMessage } from 'naive-ui';
 import PageHeader from '@/components/PageHeader.vue';
+import { useI18n } from 'vue-i18n';
 import { employeePortalApi, type SafetyQuizQuestion } from '@/api/employeePortal';
 import { toApiError } from '@/api/client';
+
+const { locale } = useI18n();
 
 const router = useRouter();
 const msg = useMessage();
@@ -16,7 +19,7 @@ const loading = ref(true);
 
 onMounted(async () => {
   try {
-    questions.value = await employeePortalApi.quiz();
+    questions.value = await employeePortalApi.quiz(locale.value);
     for (const q of questions.value) answers.value[q.id] = '';
   } catch (e) {
     msg.error(toApiError(e).detail);

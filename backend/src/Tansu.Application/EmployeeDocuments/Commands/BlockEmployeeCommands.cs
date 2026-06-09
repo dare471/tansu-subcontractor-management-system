@@ -20,7 +20,8 @@ public sealed class BlockEmployeeHandler(
     ITansuAccessService accessService,
     IMediator mediator,
     IHikAccessService hikAccess,
-    IPublishEndpoint publisher) : IRequestHandler<BlockEmployeeCommand, EmployeeBlockRecordDto>
+    IPublishEndpoint publisher,
+    IAuditRecorder audit) : IRequestHandler<BlockEmployeeCommand, EmployeeBlockRecordDto>
 {
     public async Task<EmployeeBlockRecordDto> Handle(BlockEmployeeCommand req, CancellationToken ct)
     {
@@ -65,6 +66,10 @@ public sealed class BlockEmployeeHandler(
         };
 
         db.EmployeeBlockRecords.Add(record);
+        audit.Record(new AuditEntry(
+            AuditActions.EmployeeBlocked, "employee", employee.Id,
+            $"Заблокирован: {employee.FullName} — {reason}",
+            ProjectOid: employee.ProjectOid, SubcontractorId: employee.SubcontractorId));
         await db.SaveChangesAsync(ct);
 
         await mediator.Send(new RevokeEmployeeAccessPassesCommand(employee.Id), ct);

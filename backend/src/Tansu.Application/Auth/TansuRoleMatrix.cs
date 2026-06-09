@@ -2,9 +2,6 @@ using Tansu.Domain.Enums;
 
 namespace Tansu.Application.Auth;
 
-/// <summary>
-/// Матрица прав ролей ТАНСУ (см. README — раздел «Роли ТАНСУ»).
-/// </summary>
 public static class TansuRoleMatrix
 {
     public static TansuPermissionsDto Resolve(string? role, bool isSuperUser) =>
@@ -27,7 +24,9 @@ public static class TansuRoleMatrix
                 IsReadOnlyMonitoring: false,
                 IsGlobalAdmin: false,
                 CanManageSubcontractorUsers: true,
-                CanReassignSubcontractorManager: false),
+                CanReassignSubcontractorManager: false,
+                CanViewAuditLog: false,
+                CanViewReports: true),
             TansuRole.OidDirector => new(
                 CanRegisterSubcontractors: false,
                 CanManageApprovalMatrix: false,
@@ -45,22 +44,24 @@ public static class TansuRoleMatrix
                 IsReadOnlyMonitoring: false,
                 IsGlobalAdmin: false,
                 CanManageSubcontractorUsers: false,
-                CanReassignSubcontractorManager: true),
+                CanReassignSubcontractorManager: true,
+                CanViewAuditLog: true,
+                CanViewReports: true),
             TansuRole.SbProject => new(
                 false, false, false, true, false, false, false, true, false,
-                true, false, true, true, false, false, false, false),
+                true, false, true, true, false, false, false, false, false, true),
             TansuRole.SbChief => new(
                 false, false, false, true, true, false, false, true, false,
-                true, false, true, true, false, false, false, false),
+                true, false, true, true, false, false, false, false, true, true),
             TansuRole.SafetyProject => new(
                 false, false, false, true, false, false, false, true, false,
-                true, false, true, true, false, false, false, false),
+                true, false, true, true, false, false, false, false, false, true),
             TansuRole.SafetyChief => new(
                 false, false, false, true, true, false, false, true, false,
-                true, false, true, true, false, false, false, false),
+                true, false, true, true, false, false, false, false, true, true),
             TansuRole.ProjectManager => new(
                 false, false, false, false, true, false, false, true, false,
-                true, false, true, false, true, false, false, false),
+                true, false, true, false, true, false, false, false, false, true),
             _ => DenyAll()
         };
 
@@ -81,23 +82,25 @@ public static class TansuRoleMatrix
         IsReadOnlyMonitoring: false,
         IsGlobalAdmin: true,
         CanManageSubcontractorUsers: true,
-        CanReassignSubcontractorManager: true);
+        CanReassignSubcontractorManager: true,
+        CanViewAuditLog: true,
+        CanViewReports: true);
 
     public static TansuPermissionsDto SubcontractorPortal() => new(
         false, false, false, false, false, false, false, true, true,
-        false, false, false, false, false, false, false, false);
+        false, false, false, false, false, false, false, false, false, true);
 
     public static TansuPermissionsDto DenyAll() => new(
         false, false, false, false, false, false, false, false, false,
-        false, false, false, false, false, false, false, false);
+        false, false, false, false, false, false, false, false, false, false);
 
-    /// <summary>Разделы меню и маршруты, доступные роли (для справки / UI).</summary>
+    /// <summary>Разделы меню по роли.</summary>
     public static IReadOnlyList<string> MenuSectionsForRole(string? role) => role switch
     {
         TansuRole.GlobalAdmin =>
             ["home", "subcontractors", "projects", "users", "tansu-employees", "matrix",
-                "document-matrix", "site-visit-journal", "approvals-inbox", "photo-reviews-inbox",
-                "document-requests-inbox"],
+                "document-matrix", "site-visit-journal", "audit-log", "reports", "incidents",
+                "approvals-inbox", "photo-reviews-inbox", "document-requests-inbox"],
         TansuRole.OidManager =>
             ["home", "subcontractors", "projects", "users", "tansu-employees", "matrix",
                 "approvals-inbox", "document-requests-inbox"],

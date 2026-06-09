@@ -7,6 +7,7 @@ using Tansu.Application.Common.Interfaces;
 using Tansu.Application.EmployeeDocuments.Commands;
 using Tansu.Contracts.Messages;
 using Tansu.Domain.Enums;
+using System.Text.Json;
 
 namespace Tansu.Application.Approvals.Commands;
 
@@ -16,7 +17,8 @@ public sealed class ApproveHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
     IPublishEndpoint publisher,
-    IMediator mediator) : IRequestHandler<ApproveCommand, Unit>
+    IMediator mediator,
+    IAuditRecorder audit) : IRequestHandler<ApproveCommand, Unit>
 {
     public async Task<Unit> Handle(ApproveCommand req, CancellationToken ct)
     {
@@ -34,6 +36,11 @@ public sealed class ApproveHandler(
             .OrderBy(a => a.OrderNo)
             .FirstOrDefaultAsync(ct);
 
+        audit.Record(new AuditEntry(
+            AuditActions.EmployeeApproved, "employee", employee.Id,
+            $"Согласован сотрудник {employee.FullName}",
+            JsonSerializer.Serialize(new { sheetId = sheet.Id, comment = sheet.Comment }),
+            employee.ProjectOid, employee.SubcontractorId));
         await db.SaveChangesAsync(ct);
 
         var approver = await db.Users.AsNoTracking().FirstAsync(u => u.Id == sheet.ApproverUserId, ct);

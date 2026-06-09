@@ -20,6 +20,8 @@ cd backend
 dotnet test
 ```
 
+Integration-тесты используют Testcontainers (PostgreSQL в Docker). Запускайте **`dotnet test` на хосте** с установленным .NET SDK 10 и запущенным Docker Desktop — не из вложенного Docker-контейнера (иначе порт БД недоступен).
+
 ### Структура
 
 - **Unit** (`Tansu.UnitTests`) — чистая логика без HTTP.
@@ -27,7 +29,7 @@ dotnet test
 
 ### Покрытие всех эндпоинтов
 
-`ApiEndpointCatalog.cs` — единый реестр всех маршрутов (сейчас **103** эндпоинта).
+`ApiEndpointCatalog.cs` — единый реестр всех маршрутов (сейчас **116** эндпоинтов).
 
 - `ApiEndpointSmokeTests` — по одному smoke-тесту на каждый маршрут (ответ не 5xx).
 - `EndpointCoverageTests` — проверяет уникальность id и полноту каталога.
@@ -53,7 +55,7 @@ npm run test:watch
 
 ### Покрытие API-клиента
 
-`apiRouteRegistry.ts` — реестр всех HTTP-вызовов и URL-хелперов в `src/api/*.ts` (**87** маршрутов).
+`apiRouteRegistry.ts` — реестр всех HTTP-вызовов и URL-хелперов в `src/api/*.ts` (**100** маршрутов).
 
 `apiRoutes.test.ts` проверяет, что каждый метод вызывает `apiClient` с ожидаемым HTTP-методом и путём.
 

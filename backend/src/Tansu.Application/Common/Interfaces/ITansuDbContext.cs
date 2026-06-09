@@ -29,6 +29,12 @@ public interface ITansuDbContext
     DbSet<UserProjectAssignment> UserProjectAssignments { get; }
     DbSet<UserSubcontractorAssignment> UserSubcontractorAssignments { get; }
     DbSet<EmployeePhotoReview> EmployeePhotoReviews { get; }
+    DbSet<AuditEvent> AuditEvents { get; }
+    DbSet<ApproverDelegation> ApproverDelegations { get; }
+    DbSet<ApprovalSlaPolicy> ApprovalSlaPolicies { get; }
+    DbSet<SiteIncident> SiteIncidents { get; }
+    DbSet<SiteIncidentEmployee> SiteIncidentEmployees { get; }
+    DbSet<SiteIncidentComment> SiteIncidentComments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

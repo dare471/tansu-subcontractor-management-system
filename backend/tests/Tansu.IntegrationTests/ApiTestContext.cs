@@ -197,6 +197,23 @@ public sealed class ApiTestContext(ApiFactory factory)
         },
         "matrix.set" => new { steps = Array.Empty<object>() },
         "document-matrix.set" => new { steps = Array.Empty<object>() },
+        "delegations.create" => new
+        {
+            delegateUserId = Guid.Parse("00000000-0000-0000-0000-000000000099"),
+            validFrom = DateTimeOffset.UtcNow.AddDays(-1),
+            validTo = DateTimeOffset.UtcNow.AddDays(7)
+        },
+        "incidents.create" => new
+        {
+            projectOid = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+            occurredAt = DateTimeOffset.UtcNow,
+            title = "Smoke incident",
+            description = "Integration smoke",
+            severity = "low",
+            blockUntilResolved = false,
+            employeeIds = Array.Empty<Guid>()
+        },
+        "incidents.update" => new { status = "resolved", resolutionNotes = "smoke" },
         _ => new { }
     };
 
