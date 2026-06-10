@@ -4,6 +4,7 @@ using System.Text;
 
 namespace Tansu.Infrastructure.Hik;
 
+
 internal static class HikCentralSigner
 {
     private const string Accept = "application/json";
@@ -34,7 +35,7 @@ internal static class HikCentralSigner
         sb.Append(Accept).Append('\n');
         sb.Append(contentMd5).Append('\n');
         sb.Append(ContentType).Append('\n');
-        sb.Append('\n');
+        sb.Append('\n'); // Date — пусто, используем x-ca-timestamp
         foreach (var (key, value) in signedHeaders)
             sb.Append(key).Append(':').Append(value).Append('\n');
         sb.Append(path);
@@ -47,6 +48,7 @@ internal static class HikCentralSigner
         };
         request.Content.Headers.Remove("Content-Type");
         request.Content.Headers.TryAddWithoutValidation("Content-Type", ContentType);
+
         request.Headers.TryAddWithoutValidation("Accept", Accept);
         request.Headers.TryAddWithoutValidation("Content-MD5", contentMd5);
         request.Headers.TryAddWithoutValidation("X-Ca-Key", appKey);
