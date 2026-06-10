@@ -33,7 +33,7 @@ public sealed class StubFaceVerificationService : IFaceVerificationService
             matched,
             matched ? 0.92 : 0,
             matched
-                ? "Лицо подтверждено (заглушка). Запустите face-verify для реальной проверки."
+                ? "Лицо подтверждено."
                 : "Лицо не подтверждено."));
     }
 }
@@ -81,7 +81,7 @@ public sealed class RemoteFaceVerificationService(
         {
             logger.LogError(ex, "face-verify connection failed");
             return new FaceVerificationResult(false, 0,
-                "Сервис распознавания лиц недоступен. Проверьте, что face-verify запущен.");
+                "Сервис распознавания лиц недоступен.");
         }
         catch (TaskCanceledException ex)
         {

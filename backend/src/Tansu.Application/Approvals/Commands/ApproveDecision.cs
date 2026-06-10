@@ -18,6 +18,7 @@ public sealed class ApproveHandler(
     ICurrentUser currentUser,
     IPublishEndpoint publisher,
     IMediator mediator,
+    IHikAccessService hikAccess,
     IAuditRecorder audit) : IRequestHandler<ApproveCommand, Unit>
 {
     public async Task<Unit> Handle(ApproveCommand req, CancellationToken ct)
@@ -81,6 +82,7 @@ public sealed class ApproveHandler(
                 new UnblockEmployeeAfterReapprovalCommand(employee.Id, initiator.Id), ct);
             await mediator.Send(new IssueEmployeeAccessPassCommand(employee.Id), ct);
             await mediator.Send(new EmployeePortal.Commands.ProvisionEmployeePortalCommand(employee.Id), ct);
+            await hikAccess.GrantAccessAsync(employee.Id, ct);
         }
 
         return Unit.Value;

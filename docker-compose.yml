@@ -73,6 +73,13 @@ services:
       Zup__ClientSecret: ${ZUP_CLIENT_SECRET:-}
       Zup__Audience: ${ZUP_AUDIENCE:-${ENTRA_AUDIENCE}}
       Zup__Scope: ${ZUP_SCOPE:-}
+      HikCentral__BaseUrl: ${HIKCENTRAL_BASE_URL:-}
+      HikCentral__AppKey: ${HIKCENTRAL_APP_KEY:-}
+      HikCentral__AppSecret: ${HIKCENTRAL_APP_SECRET:-}
+      HikCentral__OrgIndexCode: ${HIKCENTRAL_ORG_INDEX_CODE:-1}
+      HikCentral__IgnoreCertificateErrors: ${HIKCENTRAL_IGNORE_CERT_ERRORS:-true}
+      HikCentral__BlockMode: ${HIKCENTRAL_BLOCK_MODE:-RemoveFromAccessGroups}
+      HikCentral__PositionCustomFieldId: ${HIKCENTRAL_POSITION_CUSTOM_FIELD_ID:-}
       RabbitMq__Host: rabbitmq
       RabbitMq__User: ${RABBITMQ_DEFAULT_USER:-guest}
       RabbitMq__Password: ${RABBITMQ_DEFAULT_PASS:-guest}
