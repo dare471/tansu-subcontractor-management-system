@@ -31,9 +31,8 @@ export type ApiRouteEntry =
       pathPattern: RegExp;
       invoke: () => string;
     };
-
-/** При добавлении метода в src/api/*.ts — добавьте запись сюда. */
-export const EXPECTED_API_ROUTE_COUNT = 100;
+    
+export const EXPECTED_API_ROUTE_COUNT = 102;
 
 const sampleId = '00000000-0000-4000-8000-000000000001';
 const sampleProjectOid = '00000000-0000-4000-8000-000000000002';

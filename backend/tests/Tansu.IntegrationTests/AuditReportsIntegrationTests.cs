@@ -115,6 +115,7 @@ public sealed class AuditReportsIntegrationTests(ApiFactory factory)
         return null;
     }
 
+    private sealed record LoginDto(string AccessToken);
     private sealed record AuditPageDto(IReadOnlyList<AuditItemDto> Items, int Total, int Page, int PageSize);
     private sealed record AuditItemDto(string Action, string EntityType);
     private sealed record ComplianceRowDto(string SubcontractorName, int TotalEmployees);
