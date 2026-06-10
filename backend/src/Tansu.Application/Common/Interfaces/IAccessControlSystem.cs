@@ -6,7 +6,10 @@ public sealed record AccessControlPerson(
     byte[]? PhotoBytes,
     string? CardNumber,
     DateTimeOffset? ValidFrom,
-    DateTimeOffset? ValidTo);
+    DateTimeOffset? ValidTo,
+    string? PersonCode = null,
+    string? Phone = null,
+    string? Position = null);
 
 public sealed record AccessControlEvent(
     Guid EmployeeId,

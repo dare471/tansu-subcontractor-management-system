@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Tansu.Application.Common.Interfaces;
 
@@ -66,11 +67,60 @@ public sealed class PerCoAccessAdapter(ILogger<PerCoAccessAdapter> logger)
 public sealed class SigurAccessAdapter(ILogger<SigurAccessAdapter> logger)
     : StubAccessAdapter("sigur", logger);
 
-public sealed class HikAccessServiceBridge(IAccessControlOrchestrator orchestrator) : IHikAccessService
+public sealed class HikAccessServiceBridge(
+    IAccessControlOrchestrator orchestrator,
+    ITansuDbContext db,
+    IPhotoStorage photoStorage,
+    ILogger<HikAccessServiceBridge> logger) : IHikAccessService
 {
-    public Task GrantAccessAsync(Guid employeeId, CancellationToken ct) =>
-        orchestrator.SyncPersonAsync(new AccessControlPerson(employeeId, "", null, null, null, null), null, ct);
+    public async Task GrantAccessAsync(Guid employeeId, CancellationToken ct)
+    {
+        try
+        {
+            var employee = await db.Employees.AsNoTracking()
+                .FirstOrDefaultAsync(e => e.Id == employeeId, ct);
+            if (employee is null)
+            {
+                logger.LogWarning("СКУД: сотрудник {EmployeeId} не найден, заливка пропущена", employeeId);
+                return;
+            }
+
+            var photoBytes = await ReadPhotoAsync(employee.PhotoPath, ct);
+            var personCode = string.IsNullOrWhiteSpace(employee.Iin) ? null : employee.Iin.Trim();
+
+            var person = new AccessControlPerson(
+                employee.Id,
+                employee.FullName,
+                photoBytes,
+                CardNumber: null,
+                ValidFrom: DateTimeOffset.UtcNow,
+                ValidTo: null,
+                PersonCode: personCode,
+                Phone: employee.Phone,
+                Position: employee.Position);
+
+            await orchestrator.SyncPersonAsync(person, employee.ProjectOid, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "СКУД: заливка сотрудника {EmployeeId} не выполнена", employeeId);
+        }
+    }
 
     public Task RevokeAccessAsync(Guid employeeId, string reason, CancellationToken ct) =>
         orchestrator.RevokePersonAsync(employeeId, reason, null, ct);
+
+    private async Task<byte[]?> ReadPhotoAsync(string? photoPath, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(photoPath))
+            return null;
+
+        await using var stream = await photoStorage.OpenReadAsync(photoPath, ct);
+        if (stream is null)
+            return null;
+
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms, ct);
+        return ms.ToArray();
+    }
 }

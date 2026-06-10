@@ -22,7 +22,7 @@ public sealed class RemoteFacePhotoValidator(
     public async Task<FacePhotoValidationResult> ValidateHasFaceAsync(Stream photo, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(_options.BaseUrl))
-            return new FacePhotoValidationResult(true, "Проверка лица пропущена (FaceVerify не настроен).");
+            return new FacePhotoValidationResult(true, "Проверка лица не выполнялась.");
 
         using var content = new MultipartFormDataContent();
         var streamContent = new StreamContent(photo);
@@ -60,5 +60,5 @@ public sealed class StubFacePhotoValidator : IFacePhotoValidator
     public Task<FacePhotoValidationResult> ValidateHasFaceAsync(Stream photo, CancellationToken ct) =>
         Task.FromResult(new FacePhotoValidationResult(
             true,
-            "Автопроверка пропущена (FaceVerify не настроен)."));
+            "Проверка лица не выполнялась."));
 }

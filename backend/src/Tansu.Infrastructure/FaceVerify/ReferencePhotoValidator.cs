@@ -90,6 +90,6 @@ public sealed class StubReferencePhotoValidator : IReferencePhotoValidator
             480,
             60_000,
             1,
-            "Автопроверка пропущена (FaceVerify не настроен).",
-            [new PhotoValidationCheck("stub", true, "FaceVerify не настроен.")]);
+            "Проверка фото не выполнялась.",
+            [new PhotoValidationCheck("skipped", true, "Сервис проверки фото не подключён.")]);
 }

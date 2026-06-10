@@ -118,7 +118,7 @@ onUnmounted(() => {
         Фото на проверке у ответственного сотрудника ТАНСУ.
       </NAlert>
       <NAlert type="info" :show-icon="false" style="margin-bottom:12px">
-        JPEG/JPG, 40–200 КБ, лицо без очков и головных уборов, нейтральный фон (Hikvision).
+        JPEG/JPG, лицо без очков и головных уборов, нейтральный фон. Размер файла — по правилам вашей организации.
         Отправка на согласование возможна только после одобрения фото.
       </NAlert>
       <NUpload accept=".jpg,.jpeg,image/jpeg" :max="1" :show-file-list="false" :disabled="uploading" @change="onPhotoChange">

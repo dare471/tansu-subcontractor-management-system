@@ -88,13 +88,9 @@ onMounted(load);
 <template>
   <NCard title="Проекты">
     <NSpace vertical>
-      <p style="margin:0;color:var(--brand-text-muted);font-size:13px">
-        Справочник синхронизируется с ЗУП при открытии списка и при старте API.
-      </p>
       <NSpace>
         <NInput v-model:value="search" placeholder="Поиск: название, код, адрес" clearable @keyup.enter="load" style="width:300px" />
         <NButton @click="load">Найти</NButton>
-        <NButton v-if="auth.canManageProjects" @click="load">Обновить из ЗУП</NButton>
         <NButton v-if="auth.canManageProjects" type="primary" @click="openRegister">+ Добавить вручную</NButton>
       </NSpace>
       <div class="t-table-wrap">

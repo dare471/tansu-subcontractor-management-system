@@ -42,6 +42,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.Configure<EmployeePhotoReviewOptions>(configuration.GetSection(EmployeePhotoReviewOptions.SectionName));
         services.Configure<FaceVerifyOptions>(configuration.GetSection(FaceVerifyOptions.SectionName));
         services.Configure<ZupOptions>(configuration.GetSection(ZupOptions.SectionName));
+        services.Configure<HikCentralOptions>(configuration.GetSection(HikCentralOptions.SectionName));
 
         var faceVerifyUrl = configuration[$"{FaceVerifyOptions.SectionName}:BaseUrl"];
         if (!string.IsNullOrWhiteSpace(faceVerifyUrl))
@@ -89,10 +90,36 @@ public static class InfrastructureServiceCollectionExtensions
         });
         services.AddScoped<IAuditRecorder, DbAuditRecorder>();
         services.AddSingleton<IAccessControlOrchestrator, AccessControlOrchestrator>();
-        services.AddSingleton<IAccessControlSystem, HikvisionAccessAdapter>();
+
+        var hikOptions = configuration.GetSection(HikCentralOptions.SectionName).Get<HikCentralOptions>()
+            ?? new HikCentralOptions();
+        if (hikOptions.IsConfigured)
+        {
+            services.AddHttpClient(HttpHikCentralAccessControl.HttpClientName, (sp, client) =>
+                {
+                    var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<HikCentralOptions>>().Value;
+                    client.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/'));
+                    client.Timeout = TimeSpan.FromSeconds(opts.TimeoutSeconds);
+                })
+                .ConfigurePrimaryHttpMessageHandler(sp =>
+                {
+                    var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<HikCentralOptions>>().Value;
+                    var handler = new HttpClientHandler();
+                    if (opts.IgnoreCertificateErrors)
+                        handler.ServerCertificateCustomValidationCallback =
+                            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                    return handler;
+                });
+            services.AddSingleton<IAccessControlSystem, HttpHikCentralAccessControl>();
+        }
+        else
+        {
+            services.AddSingleton<IAccessControlSystem, HikvisionAccessAdapter>();
+        }
+
         services.AddSingleton<IAccessControlSystem, PerCoAccessAdapter>();
         services.AddSingleton<IAccessControlSystem, SigurAccessAdapter>();
-        services.AddSingleton<IHikAccessService, HikAccessServiceBridge>();
+        services.AddScoped<IHikAccessService, HikAccessServiceBridge>();
         services.AddSingleton<IAccessPassQrEncoder, AccessPassQrEncoder>();
         services.AddSingleton<IAccessPassTokenGenerator, AccessPassTokenGenerator>();
         services.AddSingleton<IEmployeePortalCredentialWriter, FileEmployeePortalCredentialWriter>();

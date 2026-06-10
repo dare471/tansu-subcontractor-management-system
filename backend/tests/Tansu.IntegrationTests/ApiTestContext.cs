@@ -212,13 +212,13 @@ public sealed class ApiTestContext(ApiFactory factory)
         {
             projectOid = ids.ProjectOid,
             occurredAt = DateTimeOffset.UtcNow,
-            title = "Smoke incident",
-            description = "Integration smoke",
+            title = "Тестовый инцидент",
+            description = "Проверка API",
             severity = "low",
             blockUntilResolved = false,
             employeeIds = Array.Empty<Guid>()
         },
-        "incidents.update" => new { status = "resolved", resolutionNotes = "smoke" },
+        "incidents.update" => new { status = "resolved", resolutionNotes = "закрыт" },
         _ => new { }
     };
 
