@@ -57,6 +57,10 @@ public sealed class CreateSiteIncidentHandler(
         accessService.EnsurePermission(access, p => p.CanBlockEmployees, "Создание инцидентов недоступно для вашей роли.");
 
         var userId = currentUser.UserId ?? throw new UnauthorizedException();
+
+        if (!await db.ProjectRefs.AnyAsync(p => p.ProjectOid == req.ProjectOid, ct))
+            throw new ValidationFailedException("Проект не найден.");
+
         var incident = new SiteIncident
         {
             ProjectOid = req.ProjectOid,

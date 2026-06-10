@@ -47,7 +47,7 @@ public sealed class BlockEmployeeHandler(
         if (await EmployeeBlockHelper.IsBlockedAsync(db, employee.Id, ct))
             throw new ConflictException("employee_already_blocked", "Сотрудник уже заблокирован.");
 
-        var reason = req.Reason.Trim();
+        var reason = (req.Reason ?? string.Empty).Trim();
         if (reason.Length < 3)
             throw new ValidationFailedException("Укажите причину блокировки (не короче 3 символов).");
 

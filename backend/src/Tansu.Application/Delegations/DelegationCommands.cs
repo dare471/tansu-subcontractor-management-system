@@ -43,6 +43,9 @@ public sealed class CreateApproverDelegationHandler(
         if (req.ValidTo <= req.ValidFrom)
             throw new ValidationFailedException("Дата окончания должна быть позже даты начала.");
 
+        if (!await db.Users.AnyAsync(u => u.Id == req.DelegateUserId && u.IsActive, ct))
+            throw new ValidationFailedException("Указанный замещающий пользователь не найден.");
+
         var entity = new ApproverDelegation
         {
             DelegatorUserId = userId,
