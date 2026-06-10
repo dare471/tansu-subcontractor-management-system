@@ -12,7 +12,7 @@ namespace Tansu.IntegrationTests;
 public sealed class ApiTestContext(ApiFactory factory)
 {
     public const string VerifyServiceKey = "test-verify-service-key-32chars-min!!";
-    public const string EmployeeTestPassword = "EmployeeTest1!";
+    public const string EmployeeTestPassword = IntegrationTestAuth.EmployeeTestPassword;
 
     private readonly HttpClient _http = factory.CreateClient();
     private SeededIds? _ids;
@@ -255,39 +255,7 @@ public sealed class ApiTestContext(ApiFactory factory)
         if (_employeeToken is not null)
             return _employeeToken;
 
-        var ids = await GetIdsAsync();
-        await using var scope = factory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<TansuDbContext>();
-        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-
-        var portalUser = await db.Users
-            .FirstOrDefaultAsync(u => u.UserType == UserType.Employee && u.IsActive);
-        if (portalUser is null)
-        {
-            portalUser = await db.Users
-                .FirstOrDefaultAsync(u => u.EmployeeId == ids.EmployeeId);
-        }
-
-        if (portalUser is null)
-            throw new InvalidOperationException("В демо-данных нет пользователя личного кабинета сотрудника.");
-
-        portalUser.PasswordHash = hasher.Hash(EmployeeTestPassword);
-        portalUser.MustChangePassword = false;
-        await db.SaveChangesAsync();
-
-        var employeeIin = await db.Employees
-            .Where(e => e.Id == portalUser.EmployeeId)
-            .Select(e => e.Iin)
-            .FirstAsync();
-
-        var res = await _http.PostAsJsonAsync("/api/auth/employee/login", new
-        {
-            iin = employeeIin,
-            password = EmployeeTestPassword
-        });
-        res.EnsureSuccessStatusCode();
-        var body = await res.Content.ReadFromJsonAsync<LoginPayload>();
-        _employeeToken = body!.AccessToken;
+        _employeeToken = await IntegrationTestAuth.GetEmployeeAccessTokenAsync(factory);
         return _employeeToken;
     }
 

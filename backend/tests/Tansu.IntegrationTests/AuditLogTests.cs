@@ -50,23 +50,54 @@ public sealed class AuditLogTests(ApiFactory factory)
     [Fact]
     public async Task ApproveEmployee_WritesAuditEvent()
     {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<ITansuDbContext>();
+
+        var pendingCandidates = await db.ApprovalSheet.AsNoTracking()
+            .Where(a => a.Status == ApprovalStatus.Pending)
+            .OrderBy(a => a.OrderNo)
+            .ToListAsync();
+
+        Guid? pendingSheetId = null;
+        string? approverEmail = null;
+        Guid? employeeId = null;
+
+        foreach (var sheet in pendingCandidates)
+        {
+            var hasEarlierPending = await db.ApprovalSheet.AsNoTracking().AnyAsync(a =>
+                a.EmployeeId == sheet.EmployeeId &&
+                a.RoundId == sheet.RoundId &&
+                a.Status == ApprovalStatus.Pending &&
+                a.OrderNo < sheet.OrderNo);
+            if (hasEarlierPending)
+                continue;
+
+            approverEmail = await db.Users.AsNoTracking()
+                .Where(u => u.Id == sheet.ApproverUserId)
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync();
+            if (string.IsNullOrWhiteSpace(approverEmail))
+                continue;
+
+            pendingSheetId = sheet.Id;
+            employeeId = sheet.EmployeeId;
+            break;
+        }
+
+        if (pendingSheetId is null || employeeId is null)
+            return;
+
         var http = factory.CreateClient();
-        var login = await http.PostAsJsonAsync("/api/auth/dev-login", new { email = DemoSeeder.TansuAdminEmail });
+        var login = await http.PostAsJsonAsync("/api/auth/dev-login", new { email = approverEmail });
         login.EnsureSuccessStatusCode();
         var token = (await login.Content.ReadFromJsonAsync<LoginDto>())!.AccessToken;
         http.DefaultRequestHeaders.Authorization = new("Bearer", token);
 
-        await using var scope = factory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<ITansuDbContext>();
-        var pending = await db.ApprovalSheet.AsNoTracking()
-            .FirstOrDefaultAsync(a => a.Status == ApprovalStatus.Pending);
-        if (pending is null) return;
-
-        var res = await http.PostAsJsonAsync($"/api/approvals/{pending.Id}/approve", new { comment = (string?)null });
+        var res = await http.PostAsJsonAsync($"/api/approvals/{pendingSheetId}/approve", new { comment = (string?)null });
         res.EnsureSuccessStatusCode();
 
         var audit = await db.AuditEvents.AsNoTracking()
-            .Where(e => e.Action == AuditActions.EmployeeApproved && e.EntityId == pending.EmployeeId)
+            .Where(e => e.Action == AuditActions.EmployeeApproved && e.EntityId == employeeId)
             .OrderByDescending(e => e.OccurredAt)
             .FirstOrDefaultAsync();
 

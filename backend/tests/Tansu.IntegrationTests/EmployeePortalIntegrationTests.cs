@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -12,17 +11,13 @@ namespace Tansu.IntegrationTests;
 [Collection("ApiScenario")]
 public sealed class EmployeePortalIntegrationTests(ApiFactory factory)
 {
-    private readonly ApiTestContext _ctx = new(factory);
-
     [Theory]
     [InlineData("en", "Must you use PPE")]
     [InlineData("kk", "ЖҚҚ")]
     [InlineData("ru", "средства индивидуальной защиты")]
     public async Task SafetyQuiz_returns_localized_questions(string locale, string expectedFragment)
     {
-        var http = factory.CreateClient();
-        var token = await _ctx.GetTokenAsync(ApiAuthKind.EmployeeOnly);
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var http = await IntegrationTestAuth.LoginEmployeeAsync(factory);
 
         var res = await http.GetAsync($"/api/employee-portal/safety-quiz?locale={locale}");
         res.EnsureSuccessStatusCode();
@@ -35,9 +30,7 @@ public sealed class EmployeePortalIntegrationTests(ApiFactory factory)
     [Fact]
     public async Task SiteVisits_supports_pagination_and_terminal_fields()
     {
-        var http = factory.CreateClient();
-        var token = await _ctx.GetTokenAsync(ApiAuthKind.EmployeeOnly);
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var http = await IntegrationTestAuth.LoginEmployeeAsync(factory);
 
         var res = await http.GetAsync("/api/employee-portal/site-visits?page=1&pageSize=5");
         res.EnsureSuccessStatusCode();
@@ -51,9 +44,7 @@ public sealed class EmployeePortalIntegrationTests(ApiFactory factory)
     [Fact]
     public async Task SiteVisits_works_without_pagination_query()
     {
-        var http = factory.CreateClient();
-        var token = await _ctx.GetTokenAsync(ApiAuthKind.EmployeeOnly);
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var http = await IntegrationTestAuth.LoginEmployeeAsync(factory);
 
         var res = await http.GetAsync("/api/employee-portal/site-visits");
         res.EnsureSuccessStatusCode();
@@ -62,9 +53,7 @@ public sealed class EmployeePortalIntegrationTests(ApiFactory factory)
     [Fact]
     public async Task Dashboard_includes_pass_status_fields()
     {
-        var http = factory.CreateClient();
-        var token = await _ctx.GetTokenAsync(ApiAuthKind.EmployeeOnly);
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var http = await IntegrationTestAuth.LoginEmployeeAsync(factory);
 
         var res = await http.GetAsync("/api/employee-portal/dashboard");
         res.EnsureSuccessStatusCode();
