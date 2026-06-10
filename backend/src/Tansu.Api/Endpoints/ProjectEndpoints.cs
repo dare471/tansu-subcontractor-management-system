@@ -22,6 +22,10 @@ public static class ProjectEndpoints
             IMediator m, CancellationToken ct) =>
                 Results.Ok(await m.Send(new ListProjectsQuery(search), ct)));
 
+        g.MapGet("/bind-options", async (IMediator m, CancellationToken ct) =>
+                Results.Ok(await m.Send(new ListProjectBindOptionsQuery(), ct)))
+            .RequireAuthorization(AuthPolicies.TansuOnly);
+
         g.MapGet("/staff-options", async (IMediator m, CancellationToken ct) =>
                 Results.Ok(await m.Send(new ListProjectStaffOptionsQuery(), ct)))
             .RequireAuthorization(AuthPolicies.TansuOnly);

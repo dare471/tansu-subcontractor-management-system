@@ -159,7 +159,11 @@ export async function loadTansuReportsCharts(
   await Promise.all(tasks);
 }
 
-export function loadSubcontractorReportsCharts(charts: ReportsDashboardCharts, employees: Employee[]) {
+export async function loadSubcontractorReportsCharts(
+  charts: ReportsDashboardCharts,
+  employees: Employee[],
+  canViewVisitJournal: boolean
+) {
   const slices = employeeStatusSlices(employees);
   if (hasChartData(slices)) {
     charts.personnelStatus.value = buildStatusDonut('Сотрудники', slices);
@@ -169,6 +173,20 @@ export function loadSubcontractorReportsCharts(charts: ReportsDashboardCharts, e
     const byProject = countByKey(employees, (e) => e.projectName ?? e.projectOid);
     const labels = Object.keys(byProject);
     charts.byProject.value = buildHorizontalBar('По объектам', labels, labels.map((l) => byProject[l] ?? 0));
+  }
+
+  if (canViewVisitJournal) {
+    const from = new Date();
+    from.setDate(from.getDate() - 13);
+    try {
+      const page = await siteVisitJournalApi.list({ page: 1, pageSize: 500, from: from.toISOString() });
+      const dates = page.items.map((v) => v.checkedInAt);
+      if (dates.length > 0) {
+        charts.siteVisits.value = buildVisitsLine(lastNDaysLabels(14), groupVisitsByDay(dates, 14));
+      }
+    } catch {
+      /* ignore */
+    }
   }
 }
 

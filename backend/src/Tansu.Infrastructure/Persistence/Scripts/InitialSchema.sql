@@ -341,6 +341,16 @@ ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS responsible_admin_
 ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS project_manager_user_id uuid
     REFERENCES subcontract.users(id) ON DELETE SET NULL;
 
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS zup_id integer;
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS code varchar(64);
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS description varchar(4000);
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS address varchar(500);
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS latitude double precision;
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS longitude double precision;
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS zup_project_manager_name varchar(500);
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS contract_type varchar(128);
+ALTER TABLE subcontract.project_refs ADD COLUMN IF NOT EXISTS zup_synced_at timestamptz;
+
 CREATE TABLE IF NOT EXISTS subcontract.project_documents (
     id                   uuid PRIMARY KEY,
     project_oid          uuid NOT NULL REFERENCES subcontract.project_refs(project_oid) ON DELETE CASCADE,

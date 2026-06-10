@@ -13,7 +13,8 @@ import {
   type PpeIssuance,
   type EmployeeDocumentsSummary,
   type EmployeeDocument,
-  type EmployeeBlockStatus
+  type EmployeeBlockStatus,
+  EMPLOYEE_DOCUMENT_TYPES
 } from '@/api/employees';
 import { apiClient } from '@/api/client';
 import { toApiError } from '@/api/client';
@@ -42,14 +43,7 @@ type SiteVisit = {
   verificationMethod: string;
 };
 
-const DOCUMENT_TYPES = [
-  { label: 'Удостоверение личности', value: 'id_card' },
-  { label: 'Сертификат / допуск', value: 'certificate' },
-  { label: 'Инструктаж по ТБ', value: 'safety_briefing' },
-  { label: 'Медицинская справка', value: 'medical' },
-  { label: 'Допуск на работы', value: 'permit' },
-  { label: 'Иной документ', value: 'other' }
-];
+const DOCUMENT_TYPES = EMPLOYEE_DOCUMENT_TYPES;
 
 const route = useRoute();
 const router = useRouter();

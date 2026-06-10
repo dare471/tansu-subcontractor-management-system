@@ -1,6 +1,7 @@
 using MediatR;
 using Tansu.Application.Auth;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Domain.Enums;
 
 namespace Tansu.Application.SiteVisitJournal;
 
@@ -16,7 +17,8 @@ public sealed record ExportFileDto(byte[] Content, string ContentType, string Fi
 
 public sealed class ExportSiteVisitJournalHandler(
     ITansuDbContext db,
-    ITansuAccessService accessService) : IRequestHandler<ExportSiteVisitJournalQuery, ExportFileDto>
+    ITansuAccessService accessService,
+    ICurrentUser currentUser) : IRequestHandler<ExportSiteVisitJournalQuery, ExportFileDto>
 {
     public async Task<ExportFileDto> Handle(ExportSiteVisitJournalQuery req, CancellationToken ct)
     {
@@ -24,7 +26,12 @@ public sealed class ExportSiteVisitJournalHandler(
         accessService.EnsurePermission(
             access, p => p.CanViewVisitJournal, "Журнал посещений недоступен для вашей роли.");
 
+        var subcontractorId = req.SubcontractorId;
+        if (currentUser.UserType == UserType.Subcontractor)
+            subcontractorId = currentUser.SubcontractorId
+                ?? throw new Common.Exceptions.ForbiddenException("Контекст субподрядчика отсутствует.");
+
         return await SiteVisitJournalExportBuilder.BuildAsync(
-            db, access, req.Format, req.Search, req.SubcontractorId, req.ProjectOid, req.From, req.To, ct);
+            db, access, req.Format, req.Search, subcontractorId, req.ProjectOid, req.From, req.To, ct);
     }
 }

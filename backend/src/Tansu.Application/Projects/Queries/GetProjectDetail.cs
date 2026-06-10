@@ -141,7 +141,16 @@ public sealed class GetProjectDetailHandler(
 
         return new ProjectDetailDto(
             project.ProjectOid,
+            project.ZupId,
+            project.Code,
             project.Name,
+            project.Description,
+            project.Address,
+            project.Latitude,
+            project.Longitude,
+            project.ZupProjectManagerName,
+            project.ContractType,
+            project.ZupSyncedAt,
             subcontractors.Count,
             project.CustomerName,
             project.CustomerPhone,

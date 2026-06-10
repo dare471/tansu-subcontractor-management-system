@@ -1,6 +1,7 @@
 using System.Globalization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Tansu.Application.Auth;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Application.DocumentRequests;
 using Tansu.Application.SiteVisitJournal;
@@ -45,7 +46,8 @@ public sealed record GetSubcontractorComplianceQuery(Guid? SubcontractorId) : IR
 
 public sealed class ExportApprovedPersonnelHandler(
     ITansuDbContext db,
-    ITansuAccessService accessService) : IRequestHandler<ExportApprovedPersonnelQuery, ExportFileDto>
+    ITansuAccessService accessService,
+    ICurrentUser currentUser) : IRequestHandler<ExportApprovedPersonnelQuery, ExportFileDto>
 {
     private const int MaxRows = 10_000;
 
@@ -61,6 +63,9 @@ public sealed class ExportApprovedPersonnelHandler(
             .AsQueryable();
         if (req.ProjectOid is Guid pid) q = q.Where(e => e.ProjectOid == pid);
         if (req.SubcontractorId is Guid sid) q = q.Where(e => e.SubcontractorId == sid);
+        if (currentUser.SubcontractorId is Guid ownSubId)
+            q = q.Where(e => e.SubcontractorId == ownSubId);
+        q = ReportAccessScope.ApplyEmployeeScope(q, access);
 
         var employees = await q.OrderBy(e => e.FullName).Take(MaxRows).ToListAsync(ct);
         var ids = employees.Select(e => e.Id).ToList();
@@ -100,7 +105,8 @@ public sealed class ExportApprovedPersonnelHandler(
 
 public sealed class ExportEmployeeBlocksHandler(
     ITansuDbContext db,
-    ITansuAccessService accessService) : IRequestHandler<ExportEmployeeBlocksQuery, ExportFileDto>
+    ITansuAccessService accessService,
+    ICurrentUser currentUser) : IRequestHandler<ExportEmployeeBlocksQuery, ExportFileDto>
 {
     public async Task<ExportFileDto> Handle(ExportEmployeeBlocksQuery req, CancellationToken ct)
     {
@@ -116,6 +122,9 @@ public sealed class ExportEmployeeBlocksHandler(
         if (req.To is DateTimeOffset to) q = q.Where(b => b.CreatedAt <= to);
         if (req.ProjectOid is Guid pid) q = q.Where(b => b.Employee!.ProjectOid == pid);
         if (req.SubcontractorId is Guid sid) q = q.Where(b => b.Employee!.SubcontractorId == sid);
+        if (currentUser.SubcontractorId is Guid ownSubId)
+            q = q.Where(b => b.Employee!.SubcontractorId == ownSubId);
+        q = ReportAccessScope.ApplyBlockScope(q, access);
 
         var list = await q.OrderByDescending(b => b.CreatedAt).Take(10_000).ToListAsync(ct);
         var headers = new[] { "Дата", "ФИО", "Субподрядчик", "Объект", "Действие", "Причина", "Инициатор" };
@@ -238,7 +247,10 @@ public sealed class GetSubcontractorComplianceHandler(
         accessService.EnsurePermission(access, p => p.CanViewReports, "Отчёт недоступен.");
 
         var subsQ = db.Subcontractors.AsNoTracking().Where(s => s.IsActive);
-        if (req.SubcontractorId is Guid sid) subsQ = subsQ.Where(s => s.Id == sid);
+        if (access.VisibleSubcontractorIds is { } scopeSubs)
+            subsQ = subsQ.Where(s => scopeSubs.Contains(s.Id));
+        else if (req.SubcontractorId is Guid sid)
+            subsQ = subsQ.Where(s => s.Id == sid);
         var subs = await subsQ.OrderBy(s => s.Name).ToListAsync(ct);
         var subIds = subs.Select(s => s.Id).ToList();
         var employees = await db.Employees.AsNoTracking().Where(e => subIds.Contains(e.SubcontractorId)).ToListAsync(ct);
@@ -286,15 +298,45 @@ public sealed record ExportSiteVisitsReportQuery(
 
 public sealed class ExportSiteVisitsReportHandler(
     ITansuDbContext db,
-    ITansuAccessService accessService) : IRequestHandler<ExportSiteVisitsReportQuery, ExportFileDto>
+    ITansuAccessService accessService,
+    ICurrentUser currentUser) : IRequestHandler<ExportSiteVisitsReportQuery, ExportFileDto>
 {
     public async Task<ExportFileDto> Handle(ExportSiteVisitsReportQuery req, CancellationToken ct)
     {
         var access = await accessService.GetAccessAsync(ct);
         accessService.EnsurePermission(access, p => p.CanViewReports, "Экспорт недоступен для вашей роли.");
 
+        var subcontractorId = req.SubcontractorId;
+        if (currentUser.SubcontractorId is Guid ownSubId)
+            subcontractorId = ownSubId;
+
         var file = await SiteVisitJournal.SiteVisitJournalExportBuilder.BuildAsync(
-            db, access, req.Format, req.Search, req.SubcontractorId, req.ProjectOid, req.From, req.To, ct);
+            db, access, req.Format, req.Search, subcontractorId, req.ProjectOid, req.From, req.To, ct);
         return new ExportFileDto(file.Content, file.ContentType, file.FileName);
+    }
+}
+
+internal static class ReportAccessScope
+{
+    public static IQueryable<Domain.Entities.Employee> ApplyEmployeeScope(
+        IQueryable<Domain.Entities.Employee> q,
+        TansuAccessContext access)
+    {
+        if (access.VisibleSubcontractorIds is { } subs)
+            q = q.Where(e => subs.Contains(e.SubcontractorId));
+        if (access.VisibleProjectOids is { } projects)
+            q = q.Where(e => projects.Contains(e.ProjectOid));
+        return q;
+    }
+
+    public static IQueryable<Domain.Entities.EmployeeBlockRecord> ApplyBlockScope(
+        IQueryable<Domain.Entities.EmployeeBlockRecord> q,
+        TansuAccessContext access)
+    {
+        if (access.VisibleSubcontractorIds is { } subs)
+            q = q.Where(b => subs.Contains(b.Employee!.SubcontractorId));
+        if (access.VisibleProjectOids is { } projects)
+            q = q.Where(b => projects.Contains(b.Employee!.ProjectOid));
+        return q;
     }
 }

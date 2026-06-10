@@ -60,5 +60,5 @@ public sealed class StubFacePhotoValidator : IFacePhotoValidator
     public Task<FacePhotoValidationResult> ValidateHasFaceAsync(Stream photo, CancellationToken ct) =>
         Task.FromResult(new FacePhotoValidationResult(
             true,
-            "Проверка лица пропущена (заглушка). Запустите face-verify для реальной проверки."));
+            "Автопроверка пропущена (FaceVerify не настроен)."));
 }

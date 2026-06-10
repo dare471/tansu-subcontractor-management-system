@@ -2,6 +2,17 @@ import { apiClient } from './client';
 
 const photoObjectUrlCache = new Map<string, string>();
 
+export const EMPLOYEE_DOCUMENT_TYPES = [
+  { label: 'Удостоверение личности', value: 'id_card' },
+  { label: 'Форма 086 (медосмотр)', value: 'medical_form_086' },
+  { label: 'Удостоверение электрика', value: 'electrician_license' },
+  { label: 'Сертификат / допуск', value: 'certificate' },
+  { label: 'Инструктаж по ТБ', value: 'safety_briefing' },
+  { label: 'Медицинская справка', value: 'medical' },
+  { label: 'Допуск на работы', value: 'permit' },
+  { label: 'Иной документ', value: 'other' }
+] as const;
+
 export type UploadPhotoResult = {
   photoPath: string;
   status: string;

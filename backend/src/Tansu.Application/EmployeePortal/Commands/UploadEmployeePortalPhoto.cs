@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Application.EmployeePhotoReviews;
@@ -16,7 +17,8 @@ public sealed class UploadEmployeePortalPhotoHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
     IPhotoStorage storage,
-    IMediator mediator) : IRequestHandler<UploadEmployeePortalPhotoCommand, UploadPhotoReviewResultDto>
+    IMediator mediator,
+    IOptions<EmployeePhotoReviewOptions> photoOptions) : IRequestHandler<UploadEmployeePortalPhotoCommand, UploadPhotoReviewResultDto>
 {
     public async Task<UploadPhotoReviewResultDto> Handle(
         UploadEmployeePortalPhotoCommand req,
@@ -35,8 +37,12 @@ public sealed class UploadEmployeePortalPhotoHandler(
         await req.Content.CopyToAsync(buffer, ct);
         if (buffer.Length == 0)
             throw new ValidationFailedException("Файл пустой.");
-        if (buffer.Length > 200 * 1024)
-            throw new ValidationFailedException("Файл больше 200 КБ. Требование Hikvision: 40–200 КБ.");
+        var maxBytes = photoOptions.Value.MaxPhotoBytes > 0
+            ? photoOptions.Value.MaxPhotoBytes
+            : 1024 * 1024;
+        if (buffer.Length > maxBytes)
+            throw new ValidationFailedException(
+                $"Файл больше {maxBytes / 1024} КБ. Уменьшите размер или измените лимит EmployeePhotoReview:MaxPhotoBytes.");
 
         buffer.Position = 0;
         var relative = await storage.SaveAsync(employee.Id, req.FileName, buffer, ct);

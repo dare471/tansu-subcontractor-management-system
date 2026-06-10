@@ -1,6 +1,20 @@
 import { apiClient } from './client';
 
-export type Project = { projectOid: string; name: string | null; subcontractorsCount: number };
+export type ProjectBindOption = {
+  projectOid: string;
+  code: string | null;
+  name: string | null;
+};
+
+export type Project = {
+  projectOid: string;
+  zupId: number | null;
+  code: string | null;
+  name: string | null;
+  address: string | null;
+  subcontractorsCount: number;
+  isFromZup: boolean;
+};
 
 export type ProjectStaffOption = {
   id: string;
@@ -50,7 +64,16 @@ export type ProjectDocument = {
 
 export type ProjectDetail = {
   projectOid: string;
+  zupId: number | null;
+  code: string | null;
   name: string | null;
+  description: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  zupProjectManagerName: string | null;
+  contractType: string | null;
+  zupSyncedAt: string | null;
   subcontractorsCount: number;
   customerName: string | null;
   customerPhone: string | null;
@@ -91,6 +114,8 @@ export const PROJECT_DOCUMENT_TYPES = [
 export const projectsApi = {
   list: (search?: string) =>
     apiClient.get<Project[]>('/api/projects', { params: { search } }).then((r) => r.data),
+  bindOptions: () =>
+    apiClient.get<ProjectBindOption[]>('/api/projects/bind-options').then((r) => r.data),
   register: (projectOid: string, name?: string) =>
     apiClient.post<Project>('/api/projects', { projectOid, name }).then((r) => r.data),
   get: (projectOid: string) =>

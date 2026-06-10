@@ -12,7 +12,12 @@ public sealed record SubcontractorDto(
     string? ManagerFullName,
     DateTimeOffset CreatedAt);
 
-public sealed record CreateSubcontractorRequest(string Name, string Bin);
+public sealed record CreateSubcontractorRequest(
+    string Name,
+    string Bin,
+    Guid? ProjectOid = null,
+    string? ProjectName = null,
+    string? ActivityType = null);
 public sealed record UpdateSubcontractorRequest(string Name, string Bin, Guid? ManagerUserId = null);
 public sealed record SubcontractorDocumentDto(
     Guid Id,

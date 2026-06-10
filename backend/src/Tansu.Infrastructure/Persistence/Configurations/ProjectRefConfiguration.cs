@@ -11,7 +11,16 @@ public class ProjectRefConfiguration : IEntityTypeConfiguration<ProjectRef>
         e.ToTable("project_refs");
         e.HasKey(x => x.ProjectOid);
         e.Property(x => x.ProjectOid).HasColumnName("project_oid");
+        e.Property(x => x.ZupId).HasColumnName("zup_id");
+        e.Property(x => x.Code).HasColumnName("code").HasMaxLength(64);
         e.Property(x => x.Name).HasColumnName("name").HasMaxLength(500);
+        e.Property(x => x.Description).HasColumnName("description").HasMaxLength(4000);
+        e.Property(x => x.Address).HasColumnName("address").HasMaxLength(500);
+        e.Property(x => x.Latitude).HasColumnName("latitude");
+        e.Property(x => x.Longitude).HasColumnName("longitude");
+        e.Property(x => x.ZupProjectManagerName).HasColumnName("zup_project_manager_name").HasMaxLength(500);
+        e.Property(x => x.ContractType).HasColumnName("contract_type").HasMaxLength(128);
+        e.Property(x => x.ZupSyncedAt).HasColumnName("zup_synced_at").HasColumnType("timestamptz");
         e.Property(x => x.CustomerName).HasColumnName("customer_name").HasMaxLength(500);
         e.Property(x => x.CustomerPhone).HasColumnName("customer_phone").HasMaxLength(64);
         e.Property(x => x.CustomerEmail).HasColumnName("customer_email").HasMaxLength(256);

@@ -16,6 +16,7 @@ import {
 } from '@/api/subcontractors';
 import { usersApi } from '@/api/users';
 import { projectsApi, type Project } from '@/api/projects';
+import { zupApi } from '@/api/zup';
 import { toApiError } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import AppDrawer from '@/components/AppDrawer.vue';
@@ -29,7 +30,14 @@ const search = ref('');
 
 const showForm = ref(false);
 const editing = ref<Subcontractor | null>(null);
-const form = ref({ name: '', bin: '', managerUserId: null as string | null });
+const form = ref({
+  name: '',
+  bin: '',
+  managerUserId: null as string | null,
+  projectOid: null as string | null,
+  activityType: ''
+});
+const createProjectOptions = ref<SelectOption[]>([]);
 const managerOptions = ref<SelectOption[]>([]);
 
 const showDocs = ref(false);
@@ -67,15 +75,48 @@ async function loadManagers() {
   } catch { managerOptions.value = []; }
 }
 
+async function loadCreateProjects() {
+  try {
+    let options = (await projectsApi.bindOptions()).map((p) => ({
+      label: p.code ? `${p.code} — ${p.name ?? p.projectOid}` : (p.name || p.projectOid),
+      value: p.projectOid
+    }));
+    if (!options.length) {
+      const remote = await zupApi.projects();
+      options = remote.map((p) => ({
+        label: p.code ? `${p.code} — ${p.name ?? p.projectOid}` : (p.name || p.projectOid),
+        value: p.projectOid
+      }));
+    }
+    if (!options.length) {
+      const all = await projectsApi.list();
+      options = all.map((p) => ({
+        label: p.code ? `${p.code} — ${p.name ?? p.projectOid}` : (p.name || p.projectOid),
+        value: p.projectOid
+      }));
+    }
+    createProjectOptions.value = options;
+  } catch {
+    createProjectOptions.value = [];
+  }
+}
+
 function openCreate() {
   editing.value = null;
-  form.value = { name: '', bin: '', managerUserId: null };
+  form.value = { name: '', bin: '', managerUserId: null, projectOid: null, activityType: '' };
   showForm.value = true;
+  void loadCreateProjects();
 }
 
 function openEdit(row: Subcontractor) {
   editing.value = row;
-  form.value = { name: row.name, bin: row.bin, managerUserId: row.managerUserId };
+  form.value = {
+    name: row.name,
+    bin: row.bin,
+    managerUserId: row.managerUserId,
+    projectOid: null,
+    activityType: ''
+  };
   showForm.value = true;
 }
 
@@ -87,8 +128,16 @@ async function save() {
         bin: form.value.bin,
         managerUserId: form.value.managerUserId
       });
-    else
-      await subcontractorsApi.create(form.value.name, form.value.bin);
+    else {
+      const selected = createProjectOptions.value.find((o) => o.value === form.value.projectOid);
+      await subcontractorsApi.create(form.value.name, form.value.bin, form.value.projectOid
+        ? {
+            projectOid: form.value.projectOid,
+            projectName: typeof selected?.label === 'string' ? selected.label : undefined,
+            activityType: form.value.activityType.trim()
+          }
+        : undefined);
+    }
     showForm.value = false;
     await load();
     msg.success('Сохранено');
@@ -331,6 +380,20 @@ onMounted(async () => {
         <NFormItem label="БИН">
           <NInput v-model:value="form.bin" />
         </NFormItem>
+        <template v-if="!editing">
+          <NFormItem label="Проект (опционально)">
+            <NSelect
+              v-model:value="form.projectOid"
+              :options="createProjectOptions"
+              placeholder="Выберите проект из справочника"
+              filterable
+              clearable
+            />
+          </NFormItem>
+          <NFormItem v-if="form.projectOid" label="Вид деятельности на проекте">
+            <NInput v-model:value="form.activityType" placeholder="Например: монтажные работы" />
+          </NFormItem>
+        </template>
         <NFormItem
           v-if="editing && (auth.permissions.canReassignSubcontractorManager || auth.permissions.isGlobalAdmin)"
           label="Менеджер"

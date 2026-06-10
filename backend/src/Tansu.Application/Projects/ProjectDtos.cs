@@ -1,6 +1,13 @@
 namespace Tansu.Application.Projects;
 
-public sealed record ProjectDto(Guid ProjectOid, string? Name, int SubcontractorsCount);
+public sealed record ProjectDto(
+    Guid ProjectOid,
+    int? ZupId,
+    string? Code,
+    string? Name,
+    string? Address,
+    int SubcontractorsCount,
+    bool IsFromZup);
 
 public sealed record ProjectStaffOptionDto(
     Guid Id,
@@ -45,7 +52,16 @@ public sealed record ProjectDocumentDto(
 
 public sealed record ProjectDetailDto(
     Guid ProjectOid,
+    int? ZupId,
+    string? Code,
     string? Name,
+    string? Description,
+    string? Address,
+    double? Latitude,
+    double? Longitude,
+    string? ZupProjectManagerName,
+    string? ContractType,
+    DateTimeOffset? ZupSyncedAt,
     int SubcontractorsCount,
     string? CustomerName,
     string? CustomerPhone,

@@ -62,7 +62,7 @@ const allItems: NavItem[] = [
     name: 'site-visit-journal',
     label: 'Журнал посещений',
     icon: TimeOutline,
-    roles: ['TANSU'],
+    roles: ['TANSU', 'Subcontractor'],
     permission: 'canViewVisitJournal'
   },
   {

@@ -78,7 +78,7 @@ async function loadDashboard() {
 
   if (auth.isSubcontractor) {
     const employees = await employeesApi.list().catch(() => []);
-    loadSubcontractorReportsCharts({
+    await loadSubcontractorReportsCharts({
       personnelStatus,
       compliance: complianceChart,
       siteVisits,
@@ -86,7 +86,7 @@ async function loadDashboard() {
       pendingBySub,
       byProject,
       documentRequests
-    }, employees);
+    }, employees, auth.canViewVisitJournal);
     await loadSubcontractorDocumentChart({
       personnelStatus,
       compliance: complianceChart,
@@ -100,7 +100,7 @@ async function loadDashboard() {
 }
 
 async function loadCompliance() {
-  if (!auth.permissions.canViewReports) return;
+  if (!auth.isTansu || !auth.permissions.canViewReports) return;
   try {
     compliance.value = await reportsApi.compliance();
   } catch (e) {
@@ -144,7 +144,7 @@ onMounted(async () => {
           <DashboardChart :option="personnelStatus" />
         </div>
 
-        <div v-if="complianceChart" class="t-dashboard-card">
+        <div v-if="auth.isTansu && complianceChart" class="t-dashboard-card">
           <h3 class="t-dashboard-card__title">Допуск и блокировки</h3>
           <p class="t-dashboard-card__subtitle">По субподрядчикам</p>
           <DashboardChart :option="complianceChart" />
@@ -200,7 +200,7 @@ onMounted(async () => {
         </NGrid>
       </div>
 
-      <NCard v-if="!loading && auth.permissions.canViewReports" title="Сводка по субподрядчикам">
+      <NCard v-if="!loading && auth.isTansu && auth.permissions.canViewReports" title="Сводка по субподрядчикам">
         <NDataTable :columns="columns" :data="compliance" :bordered="false" />
       </NCard>
     </NSpace>

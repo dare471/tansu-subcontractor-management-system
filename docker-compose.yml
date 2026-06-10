@@ -81,6 +81,7 @@ services:
       AccessPass__VerifyServiceKey: ${VERIFY_SERVICE_KEY:-dev-verify-service-key-change-me}
       FaceVerify__BaseUrl: ${FACE_VERIFY_BASE_URL:-http://face-verify:8092}
       EmployeePhotoReview__RequireManualApproval: ${EMPLOYEE_PHOTO_REQUIRE_MANUAL:-true}
+      EmployeePhotoReview__MaxPhotoBytes: ${EMPLOYEE_PHOTO_MAX_BYTES:-1048576}
       EmployeePortal__CredentialsLogPath: ${EMPLOYEE_PORTAL_CREDENTIALS_PATH:-/app/data/employee-portal-credentials.log}
     ports:
       - "${API_PORT:-8080}:8080"

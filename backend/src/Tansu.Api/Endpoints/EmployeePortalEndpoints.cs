@@ -1,6 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Tansu.Api;
 using Tansu.Api.Auth;
+using Tansu.Application.EmployeePhotoReviews;
 using Tansu.Application.EmployeePortal;
 using Tansu.Application.EmployeePortal.Commands;
 using Tansu.Application.EmployeePortal.Queries;
@@ -76,7 +79,11 @@ public static class EmployeePortalEndpoints
                 Results.Ok(await mediator.Send(new GetEmployeePortalBlockStatusQuery(), ct)))
         .WithSummary("Статус блокировки (read-only).");
 
-        portal.MapPost("/photo", async (HttpRequest http, IMediator mediator, CancellationToken ct) =>
+        portal.MapPost("/photo", async (
+            HttpRequest http,
+            IMediator mediator,
+            IOptions<EmployeePhotoReviewOptions> photoOptions,
+            CancellationToken ct) =>
         {
             if (!http.HasFormContentType)
                 return Results.BadRequest(new { code = "bad_request", detail = "Ожидается multipart/form-data." });
@@ -85,8 +92,14 @@ public static class EmployeePortalEndpoints
             var file = form.Files["file"] ?? form.Files.FirstOrDefault();
             if (file is null || file.Length == 0)
                 return Results.BadRequest(new { code = "bad_request", detail = "Файл не передан." });
-            if (file.Length > 200 * 1024)
-                return Results.BadRequest(new { code = "file_too_large", detail = "Файл больше 200 КБ (требование Hikvision)." });
+
+            var maxBytes = PhotoUploadLimits.ResolveMaxBytes(photoOptions);
+            if (file.Length > maxBytes)
+                return Results.BadRequest(new
+                {
+                    code = "file_too_large",
+                    detail = $"Файл больше {maxBytes / 1024} КБ."
+                });
 
             await using var stream = file.OpenReadStream();
             var result = await mediator.Send(new UploadEmployeePortalPhotoCommand(file.FileName, stream), ct);

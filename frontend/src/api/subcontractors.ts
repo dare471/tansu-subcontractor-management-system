@@ -42,8 +42,18 @@ export const SUBCONTRACTOR_DOC_TYPES = [
 export const subcontractorsApi = {
   list: (search?: string) =>
     apiClient.get<Subcontractor[]>('/api/subcontractors', { params: { search } }).then((r) => r.data),
-  create: (name: string, bin: string) =>
-    apiClient.post<Subcontractor>('/api/subcontractors', { name, bin }).then((r) => r.data),
+  create: (
+    name: string,
+    bin: string,
+    options?: { projectOid?: string; projectName?: string; activityType?: string }
+  ) =>
+    apiClient.post<Subcontractor>('/api/subcontractors', {
+      name,
+      bin,
+      projectOid: options?.projectOid,
+      projectName: options?.projectName,
+      activityType: options?.activityType
+    }).then((r) => r.data),
   update: (id: string, payload: { name: string; bin: string; managerUserId?: string | null }) =>
     apiClient.put<Subcontractor>(`/api/subcontractors/${id}`, payload).then((r) => r.data),
   remove: (id: string) => apiClient.delete(`/api/subcontractors/${id}`),

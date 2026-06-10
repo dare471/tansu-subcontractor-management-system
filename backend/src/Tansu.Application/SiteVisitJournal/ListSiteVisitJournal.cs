@@ -38,13 +38,19 @@ public sealed record ListSiteVisitJournalQuery(
 
 public sealed class ListSiteVisitJournalHandler(
     ITansuDbContext db,
-    ITansuAccessService accessService) : IRequestHandler<ListSiteVisitJournalQuery, SiteVisitJournalPageDto>
+    ITansuAccessService accessService,
+    ICurrentUser currentUser) : IRequestHandler<ListSiteVisitJournalQuery, SiteVisitJournalPageDto>
 {
     public async Task<SiteVisitJournalPageDto> Handle(ListSiteVisitJournalQuery req, CancellationToken ct)
     {
         var access = await accessService.GetAccessAsync(ct);
         accessService.EnsurePermission(
             access, p => p.CanViewVisitJournal, "Журнал посещений недоступен для вашей роли.");
+
+        var subcontractorId = req.SubcontractorId;
+        if (currentUser.UserType == UserType.Subcontractor)
+            subcontractorId = currentUser.SubcontractorId
+                ?? throw new Common.Exceptions.ForbiddenException("Контекст субподрядчика отсутствует.");
 
         var page = req.Page < 1 ? 1 : req.Page;
         var pageSize = req.PageSize switch
@@ -58,7 +64,7 @@ public sealed class ListSiteVisitJournalHandler(
             db.EmployeeSiteVisits.AsNoTracking(),
             access,
             req.Search,
-            req.SubcontractorId,
+            subcontractorId,
             req.ProjectOid,
             req.From,
             req.To);

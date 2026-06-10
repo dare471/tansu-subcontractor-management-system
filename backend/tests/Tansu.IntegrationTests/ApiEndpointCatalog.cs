@@ -6,7 +6,7 @@ namespace Tansu.IntegrationTests;
 /// </summary>
 public static class ApiEndpointCatalog
 {
-    public const int ExpectedCount = 116;
+    public const int ExpectedCount = 118;
 
     public static IReadOnlyList<ApiEndpoint> All { get; } =
     [
@@ -40,6 +40,7 @@ public static class ApiEndpointCatalog
 
         // Projects
         new("projects.list", HttpMethod.Get, "/api/projects", ApiAuthKind.TansuOnly),
+        new("projects.bind-options", HttpMethod.Get, "/api/projects/bind-options", ApiAuthKind.TansuOnly),
         new("projects.staff-options", HttpMethod.Get, "/api/projects/staff-options", ApiAuthKind.TansuOnly),
         new("projects.get", HttpMethod.Get, "/api/projects/{projectOid}", ApiAuthKind.TansuOnly),
         new("projects.update", HttpMethod.Put, "/api/projects/{projectOid}", ApiAuthKind.TansuOnly, ApiRequestBody.JsonEmpty),
@@ -161,6 +162,7 @@ public static class ApiEndpointCatalog
 
         // ZUP
         new("zup.employees", HttpMethod.Get, "/api/zup/employees", ApiAuthKind.TansuOnly, Query: "company=tansu_construction"),
+        new("zup.projects", HttpMethod.Get, "/api/zup/projects", ApiAuthKind.TansuOnly),
     ];
 }
 

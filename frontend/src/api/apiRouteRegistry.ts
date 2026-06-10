@@ -147,6 +147,13 @@ export const apiRouteRegistry: ApiRouteEntry[] = [
 
   // projects
   { id: 'projects.list', kind: 'http', method: 'GET', pathPattern: /^\/api\/projects$/, invoke: () => projectsApi.list() },
+  {
+    id: 'projects.bindOptions',
+    kind: 'http',
+    method: 'GET',
+    pathPattern: /^\/api\/projects\/bind-options$/,
+    invoke: () => projectsApi.bindOptions()
+  },
   { id: 'projects.register', kind: 'http', method: 'POST', pathPattern: /^\/api\/projects$/, invoke: () => projectsApi.register(sampleProjectOid) },
   {
     id: 'projects.get',
@@ -601,5 +608,6 @@ export const apiRouteRegistry: ApiRouteEntry[] = [
   },
 
   // zup
-  { id: 'zup.employees', kind: 'http', method: 'GET', pathPattern: /^\/api\/zup\/employees$/, invoke: () => zupApi.employees('tansu_construction') }
+  { id: 'zup.employees', kind: 'http', method: 'GET', pathPattern: /^\/api\/zup\/employees$/, invoke: () => zupApi.employees('tansu_construction') },
+  { id: 'zup.projects', kind: 'http', method: 'GET', pathPattern: /^\/api\/zup\/projects$/, invoke: () => zupApi.projects() }
 ];

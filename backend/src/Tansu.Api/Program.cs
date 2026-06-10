@@ -3,6 +3,7 @@ using Tansu.Api.Endpoints;
 using Tansu.Api.Middleware;
 using Tansu.Application;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Application.Zup;
 using Tansu.Infrastructure;
 using Tansu.Infrastructure.Messaging;
 using Tansu.Infrastructure.Persistence;
@@ -38,6 +39,11 @@ var app = builder.Build();
 await using (var scope = app.Services.CreateAsyncScope())
 {
     await DbInitializer.InitializeAsync(scope.ServiceProvider);
+
+    var db = scope.ServiceProvider.GetRequiredService<ITansuDbContext>();
+    var zupProjects = scope.ServiceProvider.GetRequiredService<IZupProjectDirectory>();
+    await ZupProjectSync.SyncToLocalRefsAsync(db, zupProjects, CancellationToken.None);
+
     if (app.Environment.IsDevelopment())
     {
         await DemoSeeder.SeedAsync(scope.ServiceProvider);

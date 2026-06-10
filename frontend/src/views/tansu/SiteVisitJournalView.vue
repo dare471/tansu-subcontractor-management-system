@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import {
   NCard, NSpace, NInput, NButton, NDataTable, NSelect, NPagination,
   useMessage, type DataTableColumns
@@ -7,9 +7,12 @@ import {
 import { siteVisitJournalApi, type SiteVisitJournalItem } from '@/api/siteVisitJournal';
 import { subcontractorsApi } from '@/api/subcontractors';
 import { projectsApi } from '@/api/projects';
+import { authApi } from '@/api/auth';
 import { toApiError } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
 
 const msg = useMessage();
+const auth = useAuthStore();
 const items = ref<SiteVisitJournalItem[]>([]);
 const loading = ref(false);
 const exporting = ref<'excel' | 'pdf' | null>(null);
@@ -38,6 +41,15 @@ function currentFilters() {
 
 async function loadFilters() {
   try {
+    if (auth.isSubcontractor) {
+      const myProjects = await authApi.myProjects();
+      projectOptions.value = myProjects.map((p) => ({
+        label: p.name || p.projectOid,
+        value: p.projectOid
+      }));
+      return;
+    }
+
     const [subs, projects] = await Promise.all([
       subcontractorsApi.list(),
       projectsApi.list()
@@ -100,9 +112,14 @@ function formatDate(value: string | null) {
 
 const TABLE_SCROLL_X = 1520;
 
-const columns: DataTableColumns<SiteVisitJournalItem> = [
+const columns = computed<DataTableColumns<SiteVisitJournalItem>>(() => {
+  const base: DataTableColumns<SiteVisitJournalItem> = [
   { title: 'ФИО', key: 'employeeFullName', width: 180, ellipsis: { tooltip: true } },
-  { title: 'Субподрядчик', key: 'subcontractorName', width: 180, ellipsis: { tooltip: true } },
+  ];
+  if (!auth.isSubcontractor) {
+    base.push({ title: 'Субподрядчик', key: 'subcontractorName', width: 180, ellipsis: { tooltip: true } });
+  }
+  base.push(
   {
     title: 'Объект', key: 'projectName', width: 180,
     ellipsis: { tooltip: true },
@@ -119,8 +136,9 @@ const columns: DataTableColumns<SiteVisitJournalItem> = [
   {
     title: 'Face ID', key: 'faceConfidence', width: 90, align: 'center',
     render: (r) => r.faceConfidence != null ? `${(r.faceConfidence * 100).toFixed(1)}%` : '—'
-  }
-];
+  });
+  return base;
+});
 
 onMounted(async () => {
   await loadFilters();
@@ -129,7 +147,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <NCard title="Журнал посещений">
+  <NCard :title="auth.isSubcontractor ? 'Журнал посещений сотрудников' : 'Журнал посещений'">
     <NSpace vertical>
       <NSpace wrap>
         <NInput
@@ -140,9 +158,10 @@ onMounted(async () => {
           @keyup.enter="() => { page = 1; load(); }"
         />
         <NSelect
+          v-if="!auth.isSubcontractor"
           v-model:value="subcontractorId"
           :options="subcontractorOptions"
-          placeholder="Субпodрядчик"
+          placeholder="Субподрядчик"
           clearable
           filterable
           style="width:220px"

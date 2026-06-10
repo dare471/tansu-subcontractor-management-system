@@ -107,7 +107,7 @@ const routes: RouteRecordRaw[] = [
         path: 'site-visit-journal',
         name: 'site-visit-journal',
         component: () => import('@/views/tansu/SiteVisitJournalView.vue'),
-        meta: { roles: ['TANSU'], permission: 'canViewVisitJournal' }
+        meta: { roles: ['TANSU', 'Subcontractor'], permission: 'canViewVisitJournal' }
       },
       {
         path: 'audit-log',
