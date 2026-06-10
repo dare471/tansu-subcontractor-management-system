@@ -29,6 +29,8 @@ export type TansuPermissions = {
   canReviewPhotos: boolean;
   isReadOnlyMonitoring: boolean;
   isGlobalAdmin: boolean;
+  canViewAuditLog: boolean;
+  canViewReports: boolean;
 };
 
 export type MeResponse = {

@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { get, post, put, del } = vi.hoisted(() => ({
+const { get, post, put, patch, del } = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
+  patch: vi.fn(),
   del: vi.fn()
 }));
 
@@ -12,6 +13,7 @@ vi.mock('./client', () => ({
     get,
     post,
     put,
+    patch,
     delete: del,
     defaults: { baseURL: 'http://test' }
   },
@@ -24,10 +26,11 @@ function resetMocks() {
   get.mockReset().mockResolvedValue({ data: {}, headers: { 'content-disposition': 'filename="journal.pdf"' } });
   post.mockReset().mockResolvedValue({ data: {} });
   put.mockReset().mockResolvedValue({ data: {} });
+  patch.mockReset().mockResolvedValue({ data: {} });
   del.mockReset().mockResolvedValue({ data: {} });
 }
 
-function methodMock(method: 'GET' | 'POST' | 'PUT' | 'DELETE') {
+function methodMock(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE') {
   switch (method) {
     case 'GET':
       return get;
@@ -35,6 +38,8 @@ function methodMock(method: 'GET' | 'POST' | 'PUT' | 'DELETE') {
       return post;
     case 'PUT':
       return put;
+    case 'PATCH':
+      return patch;
     case 'DELETE':
       return del;
   }

@@ -9,18 +9,18 @@ public static class SiteVisitJournalEndpoints
     public static IEndpointRouteBuilder MapSiteVisitJournalEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/api/site-visit-journal", async (
-            [FromQuery] int page,
-            [FromQuery] int pageSize,
             [FromQuery] string? search,
             [FromQuery] Guid? subcontractorId,
             [FromQuery] Guid? projectOid,
             [FromQuery] DateTimeOffset? from,
             [FromQuery] DateTimeOffset? to,
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
             IMediator mediator,
             CancellationToken ct) =>
         {
             var result = await mediator.Send(new ListSiteVisitJournalQuery(
-                page, pageSize, search, subcontractorId, projectOid, from, to), ct);
+                page ?? 1, pageSize ?? 50, search, subcontractorId, projectOid, from, to), ct);
             return Results.Ok(result);
         })
         .WithTags("Site visit journal")

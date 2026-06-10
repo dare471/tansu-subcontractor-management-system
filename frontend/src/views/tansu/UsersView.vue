@@ -577,13 +577,11 @@ onMounted(async () => { await Promise.all([load(), loadFilters()]); });
           label="Организация субподрядчика"
         >
           <NSelect
-            v-if="!editing"
             v-model:value="form.subcontractorId"
             :options="subs"
             filterable
             placeholder="Сначала зарегистрируйте субподрядчика"
           />
-          <NInput v-else :value="editing?.subcontractorName ?? '—'" disabled />
         </NFormItem>
         <NFormItem
           v-if="isGlobalAdmin && !createSubcontractorUser && !employeeMode && (editing?.userType === 'TANSU' || !editing)"

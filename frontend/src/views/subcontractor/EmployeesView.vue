@@ -236,7 +236,7 @@ const columns: DataTableColumns<Employee> = [
       if (r.photoReviewStatus === 'rejected' && r.photoReviewReason) {
         return h(NEllipsis, { style: { maxWidth: '140px' }, tooltip: true }, () => [
           tag,
-          h('div', { style: { fontSize: '11px', color: 'var(--n-error-color)', marginTop: '4px' } }, r.photoReviewReason)
+          h('div', { style: { fontSize: '11px', color: 'var(--n-error-color)', marginTop: '4px' } }, r.photoReviewReason ?? '')
         ]);
       }
       return tag;
@@ -260,7 +260,7 @@ const columns: DataTableColumns<Employee> = [
       h(NButton, { size: 'small', onClick: () => openEdit(row) }, () => 'Изменить'),
       h(NButton, { size: 'small', onClick: () => { photoUploadFor.value = row; (document.getElementById('photo-input') as HTMLInputElement)?.click(); } }, () => 'Фото'),
       renderSubmitButton(row),
-      h(NButton, { size: 'small', onClick: () => router.push({ name: 'employee-approvals', params: { id: row.id } }) }, () => 'История'),
+      h(NButton, { size: 'small', onClick: () => router.push({ name: 'employee-approvals', params: { id: row.id } }) }, () => 'Документы'),
       h(NPopconfirm, { onPositiveClick: () => remove(row) }, {
         default: () => 'Удалить сотрудника?',
         trigger: () => h(NButton, { size: 'small', type: 'error' }, () => 'Удалить')

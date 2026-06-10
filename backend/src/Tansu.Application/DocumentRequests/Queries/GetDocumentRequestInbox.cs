@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Tansu.Application.Approvals;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Auth;
 using Tansu.Application.Common.Interfaces;
@@ -20,28 +21,29 @@ public sealed class GetDocumentRequestInboxHandler(
         var userId = currentUser.UserId ?? throw new UnauthorizedException();
         var access = await accessService.GetAccessAsync(ct);
 
-        var pending = await db.DocumentApprovalSheet.AsNoTracking()
-            .Where(a => a.ApproverUserId == userId && a.Status == ApprovalStatus.Pending)
+        var roundKeys = await db.DocumentApprovalSheet.AsNoTracking()
+            .Where(a => a.Status == ApprovalStatus.Pending &&
+                        (a.ApproverUserId == userId || a.ActingForUserId == userId))
+            .Select(a => new { a.DocumentRequestId, a.RoundId })
+            .Distinct()
             .ToListAsync(ct);
 
-        if (pending.Count == 0)
+        if (roundKeys.Count == 0)
             return Array.Empty<DocumentRequestInboxItemDto>();
 
-        var byRound = pending.GroupBy(a => new { a.DocumentRequestId, a.RoundId });
         var items = new List<DocumentRequestInboxItemDto>();
 
-        foreach (var grp in byRound)
+        foreach (var key in roundKeys)
         {
             var earliest = await db.DocumentApprovalSheet.AsNoTracking()
-                .Where(a => a.DocumentRequestId == grp.Key.DocumentRequestId &&
-                            a.RoundId == grp.Key.RoundId &&
+                .Where(a => a.DocumentRequestId == key.DocumentRequestId &&
+                            a.RoundId == key.RoundId &&
                             a.Status == ApprovalStatus.Pending)
                 .OrderBy(a => a.OrderNo)
                 .FirstAsync(ct);
 
-            if (grp.All(g => g.Id != earliest.Id))
+            if (earliest.ApproverUserId != userId && earliest.ActingForUserId != userId)
                 continue;
-
             var request = await db.DocumentRequests.AsNoTracking()
                 .Include(r => r.Subcontractor)
                 .Include(r => r.Project)
@@ -52,10 +54,15 @@ public sealed class GetDocumentRequestInboxHandler(
             if (access.VisibleProjectOids is { } projects && request.ProjectOid is { } poid && !projects.Contains(poid))
                 continue;
 
+            var (pendingDays, isEscalated) = await ApprovalSlaHelper.ComputeAsync(
+                db, earliest.AssignedAt ?? earliest.CreatedAt, earliest.EscalatedAt, ct);
+
             items.Add(new DocumentRequestInboxItemDto(
                 earliest.Id, request.Id, request.RequestType, request.Title,
                 request.Subcontractor!.Name, request.ProjectOid, request.Project?.Name,
-                earliest.ApproverRole, earliest.OrderNo, earliest.CreatedAt));
+                earliest.ApproverRole, earliest.OrderNo, earliest.CreatedAt,
+                pendingDays, isEscalated,
+                earliest.ApproverUserId == userId));
         }
 
         return items.OrderByDescending(x => x.SubmittedAt).ToList();

@@ -323,7 +323,20 @@ onMounted(async () => {
 
     <NCard v-if="detail" :loading="loading">
       <NDescriptions label-placement="left" :column="2" bordered size="small">
+        <NDescriptionsItem v-if="detail.code" label="Код ЗУП">{{ detail.code }}</NDescriptionsItem>
+        <NDescriptionsItem v-if="detail.zupId" label="ID ЗУП">{{ detail.zupId }}</NDescriptionsItem>
         <NDescriptionsItem label="OID">{{ detail.projectOid }}</NDescriptionsItem>
+        <NDescriptionsItem v-if="detail.contractType" label="Тип договора">{{ detail.contractType }}</NDescriptionsItem>
+        <NDescriptionsItem v-if="detail.address" label="Адрес" :span="2">{{ detail.address }}</NDescriptionsItem>
+        <NDescriptionsItem
+          v-if="detail.latitude != null && detail.longitude != null"
+          label="Координаты"
+        >
+          {{ detail.latitude }}, {{ detail.longitude }}
+        </NDescriptionsItem>
+        <NDescriptionsItem v-if="detail.description" label="Описание" :span="2">
+          {{ detail.description }}
+        </NDescriptionsItem>
         <NDescriptionsItem label="Смета">
           {{ formatBudget(detail.budgetAmount, detail.budgetCurrency) }}
         </NDescriptionsItem>
@@ -347,6 +360,7 @@ onMounted(async () => {
               · {{ detail.projectManagerEmail }}
             </span>
           </template>
+          <template v-else-if="detail.zupProjectManagerName">{{ detail.zupProjectManagerName }} (ЗУП)</template>
           <template v-else>—</template>
         </NDescriptionsItem>
       </NDescriptions>

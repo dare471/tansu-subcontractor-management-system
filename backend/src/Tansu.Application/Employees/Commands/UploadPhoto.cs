@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Application.EmployeePhotoReviews;
@@ -17,12 +18,15 @@ public sealed class UploadPhotoHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
     IPhotoStorage storage,
-    IMediator mediator) : IRequestHandler<UploadPhotoCommand, UploadPhotoReviewResultDto>
+    IMediator mediator,
+    IOptions<EmployeePhotoReviewOptions> photoOptions) : IRequestHandler<UploadPhotoCommand, UploadPhotoReviewResultDto>
 {
-    private const int MaxBytes = 200 * 1024;
-
     public async Task<UploadPhotoReviewResultDto> Handle(UploadPhotoCommand req, CancellationToken ct)
     {
+        var maxBytes = photoOptions.Value.MaxPhotoBytes > 0
+            ? photoOptions.Value.MaxPhotoBytes
+            : 1024 * 1024;
+
         var e = await db.Employees.FirstOrDefaultAsync(x => x.Id == req.EmployeeId, ct)
             ?? throw new NotFoundException("Employee", req.EmployeeId);
 
@@ -39,8 +43,9 @@ public sealed class UploadPhotoHandler(
         }
 
         EnsureJpeg(req.FileName);
-        if (req.Content.CanSeek && req.Content.Length > MaxBytes)
-            throw new ValidationFailedException("Файл больше 200 КБ. Требование Hikvision: 40–200 КБ.");
+        if (req.Content.CanSeek && req.Content.Length > maxBytes)
+            throw new ValidationFailedException(
+                $"Файл больше {maxBytes / 1024} КБ. Уменьшите размер или измените лимит EmployeePhotoReview:MaxPhotoBytes.");
 
         var relative = await storage.SaveAsync(e.Id, req.FileName, req.Content, ct);
         e.PhotoPath = relative;

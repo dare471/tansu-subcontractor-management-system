@@ -12,7 +12,7 @@ namespace Tansu.IntegrationTests;
 public sealed class ApiTestContext(ApiFactory factory)
 {
     public const string VerifyServiceKey = "test-verify-service-key-32chars-min!!";
-    public const string EmployeeTestPassword = "EmployeeTest1!";
+    public const string EmployeeTestPassword = IntegrationTestAuth.EmployeeTestPassword;
 
     private readonly HttpClient _http = factory.CreateClient();
     private SeededIds? _ids;
@@ -34,6 +34,12 @@ public sealed class ApiTestContext(ApiFactory factory)
         var subcontractorId = await ctx.Subcontractors.Select(s => s.Id).FirstAsync();
         var employeeId = await ctx.Employees.Select(e => e.Id).FirstAsync();
         var userId = await ctx.Users.Where(u => u.UserType == UserType.Tansu).Select(u => u.Id).FirstAsync();
+        var delegateUserId = await ctx.Users
+            .Where(u => u.UserType == UserType.Tansu && u.IsActive && u.Id != userId)
+            .Select(u => u.Id)
+            .FirstOrDefaultAsync();
+        if (delegateUserId == Guid.Empty)
+            delegateUserId = userId;
         var batchId = await ctx.EmployeeApprovalBatches.Select(b => b.Id).FirstOrDefaultAsync();
         if (batchId == Guid.Empty)
             batchId = Guid.NewGuid();
@@ -81,6 +87,7 @@ public sealed class ApiTestContext(ApiFactory factory)
             subcontractorId,
             employeeId,
             userId,
+            delegateUserId,
             batchId,
             approvalSheetId,
             documentRequestId,
@@ -142,7 +149,7 @@ public sealed class ApiTestContext(ApiFactory factory)
             Headers = { ConnectionClose = true }
         };
         await ApplyAuthAsync(request, endpoint.Auth);
-        ApplyBody(request, endpoint);
+        ApplyBody(request, endpoint, ids);
 
         return await _http.SendAsync(request);
     }
@@ -160,15 +167,13 @@ public sealed class ApiTestContext(ApiFactory factory)
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }
 
-    private static void ApplyBody(HttpRequestMessage request, ApiEndpoint endpoint)
+    private void ApplyBody(HttpRequestMessage request, ApiEndpoint endpoint, SeededIds ids)
     {
         switch (endpoint.Body)
         {
             case ApiRequestBody.JsonEmpty:
-                request.Content = JsonContent.Create(new { });
-                break;
             case ApiRequestBody.JsonMinimal:
-                request.Content = JsonContent.Create(BuildMinimalBody(endpoint.Id));
+                request.Content = JsonContent.Create(BuildRequestBody(endpoint.Id, ids));
                 break;
             case ApiRequestBody.FormEmpty:
                 request.Content = new MultipartFormDataContent();
@@ -176,7 +181,7 @@ public sealed class ApiTestContext(ApiFactory factory)
         }
     }
 
-    private static object BuildMinimalBody(string endpointId) => endpointId switch
+    private static object BuildRequestBody(string endpointId, SeededIds ids) => endpointId switch
     {
         "auth.login" => new { email = DemoSeedData.SubMontazhEmail, password = "wrong-password" },
         "auth.dev-login" => new { email = DemoSeeder.TansuAdminEmail },
@@ -197,6 +202,23 @@ public sealed class ApiTestContext(ApiFactory factory)
         },
         "matrix.set" => new { steps = Array.Empty<object>() },
         "document-matrix.set" => new { steps = Array.Empty<object>() },
+        "delegations.create" => new
+        {
+            delegateUserId = ids.DelegateUserId,
+            validFrom = DateTimeOffset.UtcNow.AddDays(-1),
+            validTo = DateTimeOffset.UtcNow.AddDays(7)
+        },
+        "incidents.create" => new
+        {
+            projectOid = ids.ProjectOid,
+            occurredAt = DateTimeOffset.UtcNow,
+            title = "Smoke incident",
+            description = "Integration smoke",
+            severity = "low",
+            blockUntilResolved = false,
+            employeeIds = Array.Empty<Guid>()
+        },
+        "incidents.update" => new { status = "resolved", resolutionNotes = "smoke" },
         _ => new { }
     };
 
@@ -233,39 +255,7 @@ public sealed class ApiTestContext(ApiFactory factory)
         if (_employeeToken is not null)
             return _employeeToken;
 
-        var ids = await GetIdsAsync();
-        await using var scope = factory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<TansuDbContext>();
-        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-
-        var portalUser = await db.Users
-            .FirstOrDefaultAsync(u => u.UserType == UserType.Employee && u.IsActive);
-        if (portalUser is null)
-        {
-            portalUser = await db.Users
-                .FirstOrDefaultAsync(u => u.EmployeeId == ids.EmployeeId);
-        }
-
-        if (portalUser is null)
-            throw new InvalidOperationException("В демо-данных нет пользователя личного кабинета сотрудника.");
-
-        portalUser.PasswordHash = hasher.Hash(EmployeeTestPassword);
-        portalUser.MustChangePassword = false;
-        await db.SaveChangesAsync();
-
-        var employeeIin = await db.Employees
-            .Where(e => e.Id == portalUser.EmployeeId)
-            .Select(e => e.Iin)
-            .FirstAsync();
-
-        var res = await _http.PostAsJsonAsync("/api/auth/employee/login", new
-        {
-            iin = employeeIin,
-            password = EmployeeTestPassword
-        });
-        res.EnsureSuccessStatusCode();
-        var body = await res.Content.ReadFromJsonAsync<LoginPayload>();
-        _employeeToken = body!.AccessToken;
+        _employeeToken = await IntegrationTestAuth.GetEmployeeAccessTokenAsync(factory);
         return _employeeToken;
     }
 
@@ -276,6 +266,7 @@ public sealed class ApiTestContext(ApiFactory factory)
         Guid SubcontractorId,
         Guid EmployeeId,
         Guid UserId,
+        Guid DelegateUserId,
         Guid BatchId,
         Guid ApprovalSheetId,
         Guid DocumentRequestId,

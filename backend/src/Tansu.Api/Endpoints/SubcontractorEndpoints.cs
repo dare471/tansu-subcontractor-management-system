@@ -24,7 +24,8 @@ public static class SubcontractorEndpoints
             [FromBody] CreateSubcontractorRequest req,
             IMediator m, CancellationToken ct) =>
         {
-            var dto = await m.Send(new CreateSubcontractorCommand(req.Name, req.Bin), ct);
+            var dto = await m.Send(new CreateSubcontractorCommand(
+                req.Name, req.Bin, req.ProjectOid, req.ProjectName, req.ActivityType), ct);
             return Results.Created($"/api/subcontractors/{dto.Id}", dto);
         });
 

@@ -22,7 +22,11 @@ public sealed class GetEmployeePortalApprovalsHandler(
     }
 }
 
-public sealed record GetEmployeePortalSiteVisitsQuery : IRequest<EmployeePortalSiteVisitsDto>;
+public sealed record GetEmployeePortalSiteVisitsQuery(
+    int Page = 1,
+    int PageSize = 50,
+    DateTimeOffset? From = null,
+    DateTimeOffset? To = null) : IRequest<EmployeePortalSiteVisitsDto>;
 
 public sealed class GetEmployeePortalSiteVisitsHandler(
     ITansuDbContext db,
@@ -33,15 +37,24 @@ public sealed class GetEmployeePortalSiteVisitsHandler(
     {
         var employee = await GetEmployeePortalDashboardHandler.LoadCurrentEmployeeAsync(db, currentUser, ct);
 
-        var visits = await db.EmployeeSiteVisits.AsNoTracking()
-            .Where(v => v.EmployeeId == employee.Id)
+        var page = Math.Max(1, req.Page);
+        var pageSize = Math.Clamp(req.PageSize, 1, 200);
+        var q = db.EmployeeSiteVisits.AsNoTracking().Where(v => v.EmployeeId == employee.Id);
+        if (req.From is DateTimeOffset from) q = q.Where(v => v.CheckedInAt >= from);
+        if (req.To is DateTimeOffset to) q = q.Where(v => v.CheckedInAt <= to);
+
+        var visits = await q
             .Include(v => v.Employee!)
             .ThenInclude(e => e!.Project)
             .OrderByDescending(v => v.CheckedInAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(v => new EmployeePortalSiteVisitItemDto(
                 v.Id,
                 v.Employee!.Project != null ? v.Employee.Project.Name : null,
                 v.CheckedInAt,
+                v.CheckedOutAt,
+                v.TerminalLocation,
                 v.FaceConfidence,
                 v.VerificationMethod))
             .ToListAsync(ct);

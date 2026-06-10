@@ -1,6 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Tansu.Api;
 using Tansu.Api.Auth;
+using Tansu.Application.EmployeePhotoReviews;
 using Tansu.Application.EmployeePortal;
 using Tansu.Application.EmployeePortal.Commands;
 using Tansu.Application.EmployeePortal.Queries;
@@ -39,8 +42,19 @@ public static class EmployeePortalEndpoints
                 Results.Ok(await mediator.Send(new GetEmployeePortalApprovalsQuery(), ct)))
         .WithSummary("Статус и история согласования (только свой профиль).");
 
-        portal.MapGet("/site-visits", async (IMediator mediator, CancellationToken ct) =>
-                Results.Ok(await mediator.Send(new GetEmployeePortalSiteVisitsQuery(), ct)))
+        portal.MapGet("/site-visits", async (
+            [FromQuery] DateTimeOffset? from,
+            [FromQuery] DateTimeOffset? to,
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var p = page ?? 1;
+            var ps = pageSize ?? 50;
+            return Results.Ok(await mediator.Send(new GetEmployeePortalSiteVisitsQuery(
+                p <= 0 ? 1 : p, ps <= 0 ? 50 : ps, from, to), ct));
+        })
         .WithSummary("Журнал проходов на объект.");
 
         portal.MapGet("/ppe", async (IMediator mediator, CancellationToken ct) =>
@@ -65,7 +79,11 @@ public static class EmployeePortalEndpoints
                 Results.Ok(await mediator.Send(new GetEmployeePortalBlockStatusQuery(), ct)))
         .WithSummary("Статус блокировки (read-only).");
 
-        portal.MapPost("/photo", async (HttpRequest http, IMediator mediator, CancellationToken ct) =>
+        portal.MapPost("/photo", async (
+            HttpRequest http,
+            IMediator mediator,
+            IOptions<EmployeePhotoReviewOptions> photoOptions,
+            CancellationToken ct) =>
         {
             if (!http.HasFormContentType)
                 return Results.BadRequest(new { code = "bad_request", detail = "Ожидается multipart/form-data." });
@@ -74,8 +92,14 @@ public static class EmployeePortalEndpoints
             var file = form.Files["file"] ?? form.Files.FirstOrDefault();
             if (file is null || file.Length == 0)
                 return Results.BadRequest(new { code = "bad_request", detail = "Файл не передан." });
-            if (file.Length > 200 * 1024)
-                return Results.BadRequest(new { code = "file_too_large", detail = "Файл больше 200 КБ (требование Hikvision)." });
+
+            var maxBytes = PhotoUploadLimits.ResolveMaxBytes(photoOptions);
+            if (file.Length > maxBytes)
+                return Results.BadRequest(new
+                {
+                    code = "file_too_large",
+                    detail = $"Файл больше {maxBytes / 1024} КБ."
+                });
 
             await using var stream = file.OpenReadStream();
             var result = await mediator.Send(new UploadEmployeePortalPhotoCommand(file.FileName, stream), ct);
@@ -91,8 +115,11 @@ public static class EmployeePortalEndpoints
         })
         .WithSummary("Фото сотрудника для Face ID.");
 
-        portal.MapGet("/safety-quiz", async (IMediator mediator, CancellationToken ct) =>
-                Results.Ok(await mediator.Send(new GetSafetyQuizQuery(), ct)))
+        portal.MapGet("/safety-quiz", async (
+            [FromQuery] string? locale,
+            IMediator mediator,
+            CancellationToken ct) =>
+                Results.Ok(await mediator.Send(new GetSafetyQuizQuery(locale), ct)))
         .WithSummary("Вопросы опроса по ТБ.");
 
         portal.MapPost("/safety-quiz", async (

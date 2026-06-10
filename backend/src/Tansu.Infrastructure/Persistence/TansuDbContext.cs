@@ -35,6 +35,12 @@ public class TansuDbContext : DbContext, ITansuDbContext
     public DbSet<UserProjectAssignment> UserProjectAssignments => Set<UserProjectAssignment>();
     public DbSet<UserSubcontractorAssignment> UserSubcontractorAssignments => Set<UserSubcontractorAssignment>();
     public DbSet<EmployeePhotoReview> EmployeePhotoReviews => Set<EmployeePhotoReview>();
+    public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
+    public DbSet<ApproverDelegation> ApproverDelegations => Set<ApproverDelegation>();
+    public DbSet<ApprovalSlaPolicy> ApprovalSlaPolicies => Set<ApprovalSlaPolicy>();
+    public DbSet<SiteIncident> SiteIncidents => Set<SiteIncident>();
+    public DbSet<SiteIncidentEmployee> SiteIncidentEmployees => Set<SiteIncidentEmployee>();
+    public DbSet<SiteIncidentComment> SiteIncidentComments => Set<SiteIncidentComment>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {

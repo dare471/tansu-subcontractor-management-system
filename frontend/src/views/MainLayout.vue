@@ -59,19 +59,32 @@ const allItems: NavItem[] = [
     permission: 'canManageApprovalMatrix'
   },
   {
-    name: 'document-matrix',
-    label: 'Матрица заявок',
-    icon: ClipboardOutline,
-    roles: ['TANSU'],
-    permission: 'canApproveEmployees',
-    disabled: true
-  },
-  {
     name: 'site-visit-journal',
     label: 'Журнал посещений',
     icon: TimeOutline,
-    roles: ['TANSU'],
+    roles: ['TANSU', 'Subcontractor'],
     permission: 'canViewVisitJournal'
+  },
+  {
+    name: 'audit-log',
+    label: 'Журнал действий',
+    icon: ClipboardOutline,
+    roles: ['TANSU'],
+    permission: 'canViewAuditLog'
+  },
+  {
+    name: 'reports',
+    label: 'Отчёты',
+    icon: DocumentTextOutline,
+    roles: ['TANSU', 'Subcontractor'],
+    permission: 'canViewReports'
+  },
+  {
+    name: 'incidents',
+    label: 'Инциденты',
+    icon: MailUnreadOutline,
+    roles: ['TANSU'],
+    permission: 'canBlockEmployees'
   },
   { name: 'employees', label: 'Сотрудники', icon: IdCardOutline, roles: ['Subcontractor'] },
   { name: 'employee-batches', label: 'Пакеты согласования', icon: ClipboardOutline, roles: ['Subcontractor'] },
@@ -85,6 +98,14 @@ const allItems: NavItem[] = [
     permission: 'canApproveEmployees'
   },
   { name: 'photo-reviews-inbox', label: 'Проверка фото', icon: IdCardOutline, roles: ['TANSU'], permission: 'canReviewPhotos' },
+  {
+    name: 'document-matrix',
+    label: 'Матрица заявок',
+    icon: ClipboardOutline,
+    roles: ['TANSU'],
+    permission: 'canApproveEmployees',
+    disabled: true
+  },
   {
     name: 'document-requests-inbox',
     label: 'Согласование заявок',

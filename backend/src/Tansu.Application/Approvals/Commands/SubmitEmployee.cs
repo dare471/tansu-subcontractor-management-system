@@ -4,7 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Tansu.Application.AccessPasses.Commands;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Application.Delegations;
 using Tansu.Application.EmployeePortal.Commands;
+using Tansu.Domain.Enums;
 
 namespace Tansu.Application.Approvals.Commands;
 
@@ -14,7 +16,8 @@ public sealed class SubmitEmployeeHandler(
     ITansuDbContext db,
     ICurrentUser currentUser,
     IPublishEndpoint publisher,
-    IMediator mediator)
+    IMediator mediator,
+    IAuditRecorder audit)
     : IRequestHandler<SubmitEmployeeCommand, Guid>
 {
     public async Task<Guid> Handle(SubmitEmployeeCommand req, CancellationToken ct)
@@ -34,7 +37,13 @@ public sealed class SubmitEmployeeHandler(
         var prepared = await EmployeeSubmitCore.PrepareSubmissionAsync(
             db, employee, initiatorId, null, ct);
 
+        foreach (var sheet in prepared.Sheets)
+            await DelegationResolver.ApplyToEmployeeSheetAsync(db, sheet, employee, ct);
         db.ApprovalSheet.AddRange(prepared.Sheets);
+        audit.Record(new AuditEntry(
+            AuditActions.EmployeeSubmitted, "employee", employee.Id,
+            $"Отправлен на согласование: {employee.FullName}",
+            ProjectOid: employee.ProjectOid, SubcontractorId: employee.SubcontractorId));
         await db.SaveChangesAsync(ct);
 
         await EmployeeSubmitCore.PublishIndividualNotificationsAsync(

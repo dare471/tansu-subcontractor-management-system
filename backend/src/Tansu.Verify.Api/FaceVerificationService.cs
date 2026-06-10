@@ -15,9 +15,6 @@ public interface IFaceVerificationService
 
 public sealed record FaceVerificationResult(bool Matched, double Confidence, string Message);
 
-/// <summary>
-/// Заглушка, если Python-сервис не настроен.
-/// </summary>
 public sealed class StubFaceVerificationService : IFaceVerificationService
 {
     public Task<FaceVerificationResult> VerifyAsync(

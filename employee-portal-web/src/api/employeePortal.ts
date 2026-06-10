@@ -20,6 +20,9 @@ export type EmployeePortalDashboard = {
     verifyUrl: string;
     issuedAt: string;
     hasReferencePhoto: boolean;
+    qrValidUntil: string;
+    passStatus: string;
+    employeeBlockStatus: string;
   } | null;
 };
 
@@ -132,8 +135,10 @@ export const employeePortalApi = {
   ppe: () =>
     apiClient.get<EmployeePpeSummary>('/api/employee-portal/ppe').then((r) => r.data),
 
-  quiz: () =>
-    apiClient.get<SafetyQuizQuestion[]>('/api/employee-portal/safety-quiz').then((r) => r.data),
+  quiz: (locale?: string) =>
+    apiClient
+      .get<SafetyQuizQuestion[]>('/api/employee-portal/safety-quiz', { params: { locale } })
+      .then((r) => r.data),
 
   submitQuiz: (answers: Record<string, string>) =>
     apiClient

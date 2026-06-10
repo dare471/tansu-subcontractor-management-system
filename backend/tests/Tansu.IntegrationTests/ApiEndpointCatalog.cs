@@ -6,7 +6,7 @@ namespace Tansu.IntegrationTests;
 /// </summary>
 public static class ApiEndpointCatalog
 {
-    public const int ExpectedCount = 103;
+    public const int ExpectedCount = 118;
 
     public static IReadOnlyList<ApiEndpoint> All { get; } =
     [
@@ -40,6 +40,7 @@ public static class ApiEndpointCatalog
 
         // Projects
         new("projects.list", HttpMethod.Get, "/api/projects", ApiAuthKind.TansuOnly),
+        new("projects.bind-options", HttpMethod.Get, "/api/projects/bind-options", ApiAuthKind.TansuOnly),
         new("projects.staff-options", HttpMethod.Get, "/api/projects/staff-options", ApiAuthKind.TansuOnly),
         new("projects.get", HttpMethod.Get, "/api/projects/{projectOid}", ApiAuthKind.TansuOnly),
         new("projects.update", HttpMethod.Put, "/api/projects/{projectOid}", ApiAuthKind.TansuOnly, ApiRequestBody.JsonEmpty),
@@ -100,7 +101,7 @@ public static class ApiEndpointCatalog
         new("employee-portal.blocks", HttpMethod.Get, "/api/employee-portal/blocks", ApiAuthKind.EmployeeOnly),
         new("employee-portal.upload-photo", HttpMethod.Post, "/api/employee-portal/photo", ApiAuthKind.EmployeeOnly),
         new("employee-portal.photo", HttpMethod.Get, "/api/employee-portal/photo", ApiAuthKind.EmployeeOnly),
-        new("employee-portal.safety-quiz", HttpMethod.Get, "/api/employee-portal/safety-quiz", ApiAuthKind.EmployeeOnly),
+        new("employee-portal.safety-quiz", HttpMethod.Get, "/api/employee-portal/safety-quiz", ApiAuthKind.EmployeeOnly, Query: "locale=en"),
         new("employee-portal.submit-quiz", HttpMethod.Post, "/api/employee-portal/safety-quiz", ApiAuthKind.EmployeeOnly, ApiRequestBody.JsonMinimal),
         new("employee-portal.qr", HttpMethod.Get, "/api/employee-portal/access-pass/qr.png", ApiAuthKind.EmployeeOnly),
 
@@ -137,11 +138,31 @@ public static class ApiEndpointCatalog
         new("document-matrix.set", HttpMethod.Put, "/api/document-matrix", ApiAuthKind.TansuOnly, ApiRequestBody.JsonMinimal, Query: "projectOid={projectOid}&subcontractorId={subcontractorId}&requestType=leave"),
 
         // Site visit journal
-        new("site-visit-journal.list", HttpMethod.Get, "/api/site-visit-journal", ApiAuthKind.Authenticated, Query: "page=1&pageSize=50"),
+        new("site-visit-journal.list", HttpMethod.Get, "/api/site-visit-journal", ApiAuthKind.Authenticated),
         new("site-visit-journal.export", HttpMethod.Get, "/api/site-visit-journal/export", ApiAuthKind.Authenticated, Query: "format=csv"),
+
+        // Audit & reports
+        new("audit-events.list", HttpMethod.Get, "/api/audit-events", ApiAuthKind.TansuOnly),
+        new("reports.approved-personnel-export", HttpMethod.Get, "/api/reports/approved-personnel/export", ApiAuthKind.TansuOnly, Query: "format=csv"),
+        new("reports.site-visits-export", HttpMethod.Get, "/api/reports/site-visits/export", ApiAuthKind.TansuOnly, Query: "format=csv"),
+        new("reports.employee-blocks-export", HttpMethod.Get, "/api/reports/employee-blocks/export", ApiAuthKind.TansuOnly, Query: "format=csv"),
+        new("reports.document-requests-export", HttpMethod.Get, "/api/reports/document-requests/export", ApiAuthKind.Authenticated, Query: "format=csv"),
+        new("reports.expiring-documents-export", HttpMethod.Get, "/api/reports/expiring-documents/export", ApiAuthKind.TansuOnly, Query: "format=csv"),
+        new("reports.subcontractor-compliance", HttpMethod.Get, "/api/reports/subcontractor-compliance", ApiAuthKind.TansuOnly),
+
+        // Delegations
+        new("delegations.list", HttpMethod.Get, "/api/delegations", ApiAuthKind.Authenticated, Query: "activeOnly=true"),
+        new("delegations.create", HttpMethod.Post, "/api/delegations", ApiAuthKind.TansuOnly, ApiRequestBody.JsonMinimal),
+        new("delegations.revoke", HttpMethod.Delete, "/api/delegations/{missingId}", ApiAuthKind.TansuOnly),
+
+        // Incidents
+        new("incidents.list", HttpMethod.Get, "/api/incidents", ApiAuthKind.TansuOnly),
+        new("incidents.create", HttpMethod.Post, "/api/incidents", ApiAuthKind.TansuOnly, ApiRequestBody.JsonMinimal),
+        new("incidents.update", HttpMethod.Patch, "/api/incidents/{missingId}", ApiAuthKind.TansuOnly, ApiRequestBody.JsonMinimal),
 
         // ZUP
         new("zup.employees", HttpMethod.Get, "/api/zup/employees", ApiAuthKind.TansuOnly, Query: "company=tansu_construction"),
+        new("zup.projects", HttpMethod.Get, "/api/zup/projects", ApiAuthKind.TansuOnly),
     ];
 }
 

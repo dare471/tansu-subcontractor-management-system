@@ -1,6 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Tansu.Api;
 using Tansu.Application.AccessPasses.Queries;
+using Tansu.Application.EmployeePhotoReviews;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
 using Tansu.Application.Employees;
@@ -61,7 +64,9 @@ public static class EmployeeEndpoints
 
         g.MapPost("/{id:guid}/photo", async (
             Guid id, HttpRequest http,
-            IMediator m, CancellationToken ct) =>
+            IMediator m,
+            IOptions<EmployeePhotoReviewOptions> photoOptions,
+            CancellationToken ct) =>
         {
             if (!http.HasFormContentType)
                 return Results.BadRequest(new { code = "bad_request", detail = "Ожидается multipart/form-data." });
@@ -70,8 +75,14 @@ public static class EmployeeEndpoints
             var file = form.Files["file"] ?? form.Files.FirstOrDefault();
             if (file is null || file.Length == 0)
                 return Results.BadRequest(new { code = "bad_request", detail = "Файл не передан." });
-            if (file.Length > 200 * 1024)
-                return Results.BadRequest(new { code = "file_too_large", detail = "Файл больше 200 КБ (требование Hikvision)." });
+
+            var maxBytes = PhotoUploadLimits.ResolveMaxBytes(photoOptions);
+            if (file.Length > maxBytes)
+                return Results.BadRequest(new
+                {
+                    code = "file_too_large",
+                    detail = $"Файл больше {maxBytes / 1024} КБ."
+                });
 
             await using var stream = file.OpenReadStream();
             var result = await m.Send(new UploadPhotoCommand(id, file.FileName, stream), ct);

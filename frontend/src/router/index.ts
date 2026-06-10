@@ -107,7 +107,25 @@ const routes: RouteRecordRaw[] = [
         path: 'site-visit-journal',
         name: 'site-visit-journal',
         component: () => import('@/views/tansu/SiteVisitJournalView.vue'),
-        meta: { roles: ['TANSU'], permission: 'canViewVisitJournal' }
+        meta: { roles: ['TANSU', 'Subcontractor'], permission: 'canViewVisitJournal' }
+      },
+      {
+        path: 'audit-log',
+        name: 'audit-log',
+        component: () => import('@/views/tansu/AuditLogView.vue'),
+        meta: { roles: ['TANSU'], permission: 'canViewAuditLog' }
+      },
+      {
+        path: 'reports',
+        name: 'reports',
+        component: () => import('@/views/tansu/ReportsView.vue'),
+        meta: { roles: ['TANSU', 'Subcontractor'], permission: 'canViewReports' }
+      },
+      {
+        path: 'incidents',
+        name: 'incidents',
+        component: () => import('@/views/tansu/IncidentsView.vue'),
+        meta: { roles: ['TANSU'], permission: 'canBlockEmployees' }
       },
       {
         path: 'photo-reviews/inbox',

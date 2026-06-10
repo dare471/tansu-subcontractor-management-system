@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Application.Common.Interfaces;
 using Tansu.Domain.Entities;
 using Tansu.Domain.Enums;
 
@@ -30,7 +31,9 @@ public sealed class SetDocumentMatrixValidator : AbstractValidator<SetDocumentMa
     }
 }
 
-public sealed class SetDocumentMatrixHandler(ITansuDbContext db)
+public sealed class SetDocumentMatrixHandler(
+    ITansuDbContext db,
+    IAuditRecorder audit)
     : IRequestHandler<SetDocumentMatrixCommand, IReadOnlyList<DocumentMatrixStepDto>>
 {
     public async Task<IReadOnlyList<DocumentMatrixStepDto>> Handle(SetDocumentMatrixCommand req, CancellationToken ct)
@@ -65,6 +68,10 @@ public sealed class SetDocumentMatrixHandler(ITansuDbContext db)
             inserted.Add(entry);
         }
 
+        audit.Record(new AuditEntry(
+            AuditActions.DocumentMatrixUpdated, "document_matrix", req.ProjectOid,
+            $"Матрица заявок ({req.RequestType}) обновлена",
+            ProjectOid: req.ProjectOid, SubcontractorId: req.SubcontractorId));
         await db.SaveChangesAsync(ct);
 
         return inserted

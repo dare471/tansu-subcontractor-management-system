@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, h } from 'vue';
 import {
-  NCard, NSpace, NButton, NDataTable, NInput, NAlert,
+  NCard, NSpace, NButton, NDataTable, NInput, NAlert, NTag,
   useMessage, type DataTableColumns
 } from 'naive-ui';
 import {
@@ -60,7 +60,16 @@ async function confirm() {
   finally { submitting.value = false; }
 }
 
-const TABLE_SCROLL_X = 1320;
+function slaTag(row: DocumentRequestInboxItem) {
+  if (row.pendingDays == null) return null;
+  const type = row.isEscalated ? 'error' : row.pendingDays >= 3 ? 'warning' : 'default';
+  const label = row.isEscalated
+    ? `Эскалация · ${row.pendingDays} дн.`
+    : `${row.pendingDays} дн. в ожидании`;
+  return h(NTag, { size: 'small', type }, () => label);
+}
+
+const TABLE_SCROLL_X = 1460;
 
 const columns: DataTableColumns<DocumentRequestInboxItem> = [
   { title: 'Тип', key: 'requestType', width: 140, render: (r) => requestTypeLabel(r.requestType) },
@@ -79,10 +88,20 @@ const columns: DataTableColumns<DocumentRequestInboxItem> = [
   { title: 'Ваша роль', key: 'approverRole', width: 130, render: (r) => approverRoleLabel(r.approverRole) },
   { title: 'Шаг', key: 'orderNo', width: 70, align: 'center' },
   {
+    title: 'SLA', key: 'pendingDays', width: 150,
+    render: (r) => slaTag(r) ?? '—'
+  },
+  {
     title: 'Действия', key: 'actions', width: 260,
     render: (row) => h(NSpace, { size: 'small', wrap: false }, () => [
-      h(NButton, { size: 'small', type: 'success', onClick: () => openApprove(row) }, () => 'Согласовать'),
-      h(NButton, { size: 'small', type: 'error', onClick: () => openReject(row) }, () => 'Отклонить')
+      h(NButton, {
+        size: 'small', type: 'success', disabled: !row.canAct,
+        onClick: () => openApprove(row)
+      }, () => 'Согласовать'),
+      h(NButton, {
+        size: 'small', type: 'error', disabled: !row.canAct,
+        onClick: () => openReject(row)
+      }, () => 'Отклонить')
     ])
   }
 ];

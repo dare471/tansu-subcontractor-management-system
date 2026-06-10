@@ -18,6 +18,9 @@ public static class ZupEndpoints
             IMediator m, CancellationToken ct) =>
                 Results.Ok(await m.Send(new ListZupEmployeesQuery(company), ct)));
 
+        g.MapGet("/projects", async (IMediator m, CancellationToken ct) =>
+                Results.Ok(await m.Send(new ListZupProjectsQuery(), ct)));
+
         return app;
     }
 }

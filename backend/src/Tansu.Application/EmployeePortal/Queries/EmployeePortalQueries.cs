@@ -6,6 +6,7 @@ using Tansu.Application.AccessPasses;
 using Tansu.Application.AccessPasses.Queries;
 using Tansu.Application.Common.Exceptions;
 using Tansu.Application.Common.Interfaces;
+using Tansu.Application.EmployeeDocuments;
 using Tansu.Application.Employees;
 using Tansu.Domain.Enums;
 
@@ -38,6 +39,7 @@ public sealed class GetEmployeePortalDashboardHandler(
             .FirstOrDefaultAsync(ct);
 
         var canShowQr = isApproved && quiz is not null && pass is not null;
+        var isBlocked = await EmployeeBlockHelper.IsBlockedAsync(db, employee.Id, ct);
         if (canShowQr && pass is not null)
         {
             passDto = new EmployeePortalPassDto(
@@ -46,7 +48,10 @@ public sealed class GetEmployeePortalDashboardHandler(
                     accessPassOptions.Value.VerifyWebBaseUrl,
                     pass.Token),
                 pass.IssuedAt,
-                !string.IsNullOrEmpty(employee.PhotoPath));
+                !string.IsNullOrEmpty(employee.PhotoPath),
+                pass.IssuedAt.AddHours(24),
+                "active",
+                isBlocked ? "blocked" : "active");
         }
 
         var activePpe = await db.EmployeePpeIssuances.AsNoTracking()
@@ -90,7 +95,7 @@ public sealed class GetEmployeePortalDashboardHandler(
     }
 }
 
-public sealed record GetSafetyQuizQuery : IRequest<IReadOnlyList<SafetyQuizQuestionDto>>;
+public sealed record GetSafetyQuizQuery(string? Locale = null) : IRequest<IReadOnlyList<SafetyQuizQuestionDto>>;
 
 public sealed class GetSafetyQuizHandler(ICurrentUser currentUser)
     : IRequestHandler<GetSafetyQuizQuery, IReadOnlyList<SafetyQuizQuestionDto>>
@@ -100,7 +105,7 @@ public sealed class GetSafetyQuizHandler(ICurrentUser currentUser)
         if (currentUser.UserType != UserType.Employee)
             throw new ForbiddenException();
 
-        return Task.FromResult(SafetyQuizCatalog.Questions);
+        return Task.FromResult(SafetyQuizCatalog.GetQuestions(req.Locale));
     }
 }
 

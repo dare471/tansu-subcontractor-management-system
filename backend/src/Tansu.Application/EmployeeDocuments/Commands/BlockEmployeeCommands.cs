@@ -20,7 +20,8 @@ public sealed class BlockEmployeeHandler(
     ITansuAccessService accessService,
     IMediator mediator,
     IHikAccessService hikAccess,
-    IPublishEndpoint publisher) : IRequestHandler<BlockEmployeeCommand, EmployeeBlockRecordDto>
+    IPublishEndpoint publisher,
+    IAuditRecorder audit) : IRequestHandler<BlockEmployeeCommand, EmployeeBlockRecordDto>
 {
     public async Task<EmployeeBlockRecordDto> Handle(BlockEmployeeCommand req, CancellationToken ct)
     {
@@ -46,7 +47,7 @@ public sealed class BlockEmployeeHandler(
         if (await EmployeeBlockHelper.IsBlockedAsync(db, employee.Id, ct))
             throw new ConflictException("employee_already_blocked", "Сотрудник уже заблокирован.");
 
-        var reason = req.Reason.Trim();
+        var reason = (req.Reason ?? string.Empty).Trim();
         if (reason.Length < 3)
             throw new ValidationFailedException("Укажите причину блокировки (не короче 3 символов).");
 
@@ -65,6 +66,10 @@ public sealed class BlockEmployeeHandler(
         };
 
         db.EmployeeBlockRecords.Add(record);
+        audit.Record(new AuditEntry(
+            AuditActions.EmployeeBlocked, "employee", employee.Id,
+            $"Заблокирован: {employee.FullName} — {reason}",
+            ProjectOid: employee.ProjectOid, SubcontractorId: employee.SubcontractorId));
         await db.SaveChangesAsync(ct);
 
         await mediator.Send(new RevokeEmployeeAccessPassesCommand(employee.Id), ct);

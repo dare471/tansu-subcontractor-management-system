@@ -5,7 +5,9 @@ using Tansu.Application.Common.Interfaces;
 using Tansu.Application.AccessPasses;
 using Tansu.Application.EmployeePhotoReviews;
 using Tansu.Application.EmployeePortal;
+using Tansu.Infrastructure.AccessControl;
 using Tansu.Infrastructure.AccessPasses;
+using Tansu.Infrastructure.Audit;
 using Tansu.Infrastructure.Auth;
 using Tansu.Infrastructure.EmployeePortal;
 using Tansu.Infrastructure.FaceVerify;
@@ -71,6 +73,13 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<ISubcontractorDocumentStorage, LocalSubcontractorDocumentStorage>();
         services.AddHttpClient<IZupAccessTokenProvider, ZupClientCredentialsTokenProvider>(client =>
             client.Timeout = TimeSpan.FromSeconds(30));
+        services.AddHttpClient<IZupProjectDirectory, HttpZupProjectDirectory>((sp, client) =>
+        {
+            var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ZupOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(opts.BaseUrl))
+                client.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(60);
+        });
         services.AddHttpClient<IZupEmployeeDirectory, HttpZupEmployeeDirectory>((sp, client) =>
         {
             var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ZupOptions>>().Value;
@@ -78,7 +87,12 @@ public static class InfrastructureServiceCollectionExtensions
                 client.BaseAddress = new Uri(opts.BaseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(30);
         });
-        services.AddSingleton<IHikAccessService, StubHikAccessService>();
+        services.AddScoped<IAuditRecorder, DbAuditRecorder>();
+        services.AddSingleton<IAccessControlOrchestrator, AccessControlOrchestrator>();
+        services.AddSingleton<IAccessControlSystem, HikvisionAccessAdapter>();
+        services.AddSingleton<IAccessControlSystem, PerCoAccessAdapter>();
+        services.AddSingleton<IAccessControlSystem, SigurAccessAdapter>();
+        services.AddSingleton<IHikAccessService, HikAccessServiceBridge>();
         services.AddSingleton<IAccessPassQrEncoder, AccessPassQrEncoder>();
         services.AddSingleton<IAccessPassTokenGenerator, AccessPassTokenGenerator>();
         services.AddSingleton<IEmployeePortalCredentialWriter, FileEmployeePortalCredentialWriter>();

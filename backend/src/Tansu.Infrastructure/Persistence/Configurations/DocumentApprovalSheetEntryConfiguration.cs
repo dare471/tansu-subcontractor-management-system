@@ -20,6 +20,10 @@ public class DocumentApprovalSheetEntryConfiguration : IEntityTypeConfiguration<
         e.Property(x => x.DecidedAt).HasColumnName("decided_at").HasColumnType("timestamptz");
         e.Property(x => x.Comment).HasColumnName("comment");
         e.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
+        e.Property(x => x.AssignedAt).HasColumnName("assigned_at").HasColumnType("timestamptz");
+        e.Property(x => x.LastReminderAt).HasColumnName("last_reminder_at").HasColumnType("timestamptz");
+        e.Property(x => x.EscalatedAt).HasColumnName("escalated_at").HasColumnType("timestamptz");
+        e.Property(x => x.ActingForUserId).HasColumnName("acting_for_user_id");
 
         e.HasOne(x => x.DocumentRequest).WithMany(d => d.ApprovalSheet).HasForeignKey(x => x.DocumentRequestId)
             .OnDelete(DeleteBehavior.Cascade);

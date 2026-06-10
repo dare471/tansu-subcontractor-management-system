@@ -16,6 +16,10 @@ public class ApprovalSheetEntry
     public DateTimeOffset? DecidedAt { get; set; }
     public string? Comment { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? AssignedAt { get; set; }
+    public DateTimeOffset? LastReminderAt { get; set; }
+    public DateTimeOffset? EscalatedAt { get; set; }
+    public Guid? ActingForUserId { get; set; }
 
     public Employee? Employee { get; set; }
     public User? Approver { get; set; }

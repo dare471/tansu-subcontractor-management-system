@@ -1,0 +1,4 @@
+<p>Заявка <b>@Model.Title</b> (@Model.SubcontractorName) <b>@Model.DecisionLabel</b>.</p>
+@if (!string.IsNullOrEmpty(Model.Comment)) { <p>Комментарий: @Model.Comment</p> }
+<p>Согласующий: @Model.ApproverName</p>
+<p><a href="@Model.RequestsUrl">Открыть заявки</a></p>

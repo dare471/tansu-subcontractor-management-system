@@ -39,3 +39,6 @@ logs/
 # Local data
 data/
 photos/
+
+# Mobile apps
+subcontractor-mobile/
